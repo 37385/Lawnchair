@@ -9,34 +9,33 @@ import android.graphics.Point;
 import android.graphics.Rect;
 import android.net.Uri;
 import android.os.Bundle;
-import android.support.v4.graphics.ColorUtils;
-import android.support.v7.widget.GridLayoutManager;
-import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.RemoteViews;
 
+import androidx.core.graphics.ColorUtils;
+import androidx.recyclerview.widget.GridLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 import com.android.launcher3.AppInfo;
 import com.android.launcher3.BubbleTextView;
+import com.android.launcher3.ItemInfoWithIcon;
 import com.android.launcher3.R;
 import com.android.launcher3.Utilities;
 import com.android.launcher3.allapps.AllAppsRecyclerView;
 import com.android.launcher3.allapps.AlphabeticalAppsList;
+import com.android.launcher3.appprediction.PredictionRowView;
 import com.android.launcher3.compat.UserManagerCompat;
-import com.android.launcher3.graphics.BitmapRenderer;
+import com.android.launcher3.icons.BitmapRenderer;
 import com.android.launcher3.uioverrides.WallpaperColorInfo;
 import com.android.launcher3.util.Themes;
 import com.google.android.apps.nexuslauncher.NexusLauncherActivity;
-import com.google.android.apps.nexuslauncher.PredictionUiStateManager;
-import com.google.android.apps.nexuslauncher.allapps.PredictionsFloatingHeader;
 import com.google.android.apps.nexuslauncher.search.AppSearchProvider;
 import com.google.android.apps.nexuslauncher.search.nano.SearchProto.a_search;
 import com.google.android.apps.nexuslauncher.search.nano.SearchProto.b_search;
 import com.google.android.apps.nexuslauncher.search.nano.SearchProto.c_search;
 import com.google.android.apps.nexuslauncher.search.nano.SearchProto.d_search;
 
-import com.google.android.apps.nexuslauncher.util.ComponentKeyMapper;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -54,7 +53,7 @@ public class ConfigBuilder {
         mBundle = new Bundle();
         mNano = new c_search();
         mQsbLayout = qsbLayout;
-        mActivity = qsbLayout.mActivity;
+        mActivity = qsbLayout.getLauncher();
         mIsAllApps = isAllApps;
         mUserManager = UserManagerCompat.getInstance(mActivity);
     }
@@ -132,7 +131,7 @@ public class ConfigBuilder {
         final RemoteViews remoteViews = new RemoteViews(mActivity.getPackageName(), R.layout.apps_search_qsb_template);
 
         final int effectiveHeight = mQsbLayout.getHeight() - mQsbLayout.getPaddingTop() - mQsbLayout.getPaddingBottom() + 20;
-        final Bitmap mShadowBitmap = mQsbLayout.mShadowBitmap;
+        final Bitmap mShadowBitmap = mQsbLayout.mAllAppsShadowBitmap;
         if(mShadowBitmap != null) {
             final int internalWidth = (mShadowBitmap.getWidth() - effectiveHeight) / 2;
             final int verticalPadding = (mQsbLayout.getHeight() - mShadowBitmap.getHeight()) / 2;
@@ -284,13 +283,17 @@ public class ConfigBuilder {
             mNano.ez = viewBounds3;
         }
         bW();
-        List<ComponentKeyMapper> predictedApps = ((PredictionsFloatingHeader) mActivity.getAppsView().getFloatingHeaderView()).getPredictionRowView().getPredictedAppComponents();
+        List<ItemInfoWithIcon> predictedApps = mActivity.getAppsView().getFloatingHeaderView().findFixedRowByType(
+                PredictionRowView.class).getPredictedApps();
         List<b_search> bSearches = new ArrayList<>();
         final int count = Math.min(predictedApps.size(), allAppsCols);
         for (int i = 0; i < count; i++) {
-            b_search bSearch = bZ(mActivity.getAppsView().getAppsStore().getApp(predictedApps.get(i).getComponentKey()), i);
-            if (bSearch != null) {
-                bSearches.add(bSearch);
+            ItemInfoWithIcon item = predictedApps.get(i);
+            if (item instanceof AppInfo) {
+                b_search bSearch = bZ((AppInfo) item, i);
+                if (bSearch != null) {
+                    bSearches.add(bSearch);
+                }
             }
         }
         mNano.eo = new b_search[bSearches.size()];

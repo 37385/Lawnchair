@@ -18,11 +18,10 @@
 package ch.deletescape.lawnchair.settings.ui
 
 import android.content.Context
-import android.support.v7.preference.DialogPreference
 import android.util.AttributeSet
+import androidx.preference.DialogPreference
 import ch.deletescape.lawnchair.settings.GridSize
 import com.android.launcher3.R
-import com.android.launcher3.Utilities
 
 abstract class SingleDimensionGridSizePreference(context: Context, attrs: AttributeSet?, private val gridSize: GridSize) : DialogPreference(context, attrs) {
     val defaultSize by lazy { gridSize.numRowsOriginal }
@@ -32,11 +31,11 @@ abstract class SingleDimensionGridSizePreference(context: Context, attrs: Attrib
     }
 
     fun getSize(): Int {
-        return gridSize.fromPref(gridSize.numRows, defaultSize)
+        return gridSize.numRows
     }
 
     fun setSize(rows: Int) {
-        gridSize.numRowsPref = gridSize.toPref(rows, defaultSize)
+        gridSize.numRows = if (rows > 0) rows else defaultSize
         updateSummary()
     }
 

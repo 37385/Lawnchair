@@ -11,11 +11,9 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 import ch.deletescape.lawnchair.iconpack.AdaptiveIconCompat;
-import ch.deletescape.lawnchair.iconpack.LawnchairIconProvider;
 import com.android.launcher3.LauncherAppState;
 import com.android.launcher3.LauncherModel;
 import com.android.launcher3.MainThreadExecutor;
-import com.android.launcher3.Utilities;
 import com.google.android.apps.nexuslauncher.utils.ActionIntentFilter;
 
 import java.util.Collections;
@@ -96,7 +94,7 @@ public class DynamicClock extends BroadcastReceiver
                     }
                     if (layers.mSecondIndex < 0 || layers.mSecondIndex >= numberOfLayers) {
                         layers.mSecondIndex = -1;
-                    } else if (Utilities.ATLEAST_MARSHMALLOW) {
+                    } else {
                         layerDrawable.setDrawable(layers.mSecondIndex, null);
                         layers.mSecondIndex = -1;
                     }

@@ -67,6 +67,7 @@ open class IconShape(val topLeft: Corner,
 
     private val tmpPoint = PointF()
     open val qsbEdgeRadius = 0
+    open val windowTransitionRadius = 1f
 
     open fun getMaskPath(): Path {
         return Path().also { addToPath(it, 0f, 0f, 100f, 100f, 50f) }
@@ -155,6 +156,8 @@ open class IconShape(val topLeft: Corner,
         return "v1|$topLeft|$topRight|$bottomLeft|$bottomRight"
     }
 
+    open fun getHashString() = toString()
+
     data class Corner(val shape: IconCornerShape, val scale: PointF) {
 
         constructor(shape: IconCornerShape, scale: Float) : this(shape, PointF(scale, scale))
@@ -196,6 +199,7 @@ open class IconShape(val topLeft: Corner,
                               .16f, .16f, .16f, .16f) {
 
         override val qsbEdgeRadius = R.dimen.qsb_radius_square
+        override val windowTransitionRadius = .16f
 
         override fun toString(): String {
             return "square"
@@ -209,6 +213,7 @@ open class IconShape(val topLeft: Corner,
                                      .6f, .6f, .6f, .6f) {
 
         override val qsbEdgeRadius = R.dimen.qsb_radius_square
+        override val windowTransitionRadius = .6f
 
         override fun toString(): String {
             return "roundedSquare"
@@ -225,6 +230,19 @@ open class IconShape(val topLeft: Corner,
 
         override fun toString(): String {
             return "squircle"
+        }
+    }
+
+    object Sammy : IconShape(IconCornerShape.sammy,
+                                IconCornerShape.sammy,
+                                IconCornerShape.sammy,
+                                IconCornerShape.sammy,
+                                1f, 1f, 1f, 1f) {
+
+        override val qsbEdgeRadius = R.dimen.qsb_radius_squircle
+
+        override fun toString(): String {
+            return "sammy"
         }
     }
 
@@ -253,6 +271,19 @@ open class IconShape(val topLeft: Corner,
         }
     }
 
+    object Cupertino : IconShape(IconCornerShape.cupertino,
+                                 IconCornerShape.cupertino,
+                                 IconCornerShape.cupertino,
+                                 IconCornerShape.cupertino,
+                                 1f, 1f, 1f, 1f) {
+
+        override val windowTransitionRadius = .45f
+
+        override fun toString(): String {
+            return "cupertino"
+        }
+    }
+
     companion object {
 
         fun fromString(value: String): IconShape? {
@@ -261,8 +292,10 @@ open class IconShape(val topLeft: Corner,
                 "square" -> Square
                 "roundedSquare" -> RoundedSquare
                 "squircle" -> Squircle
+                "sammy" -> Sammy
                 "teardrop" -> Teardrop
                 "cylinder" -> Cylinder
+                "cupertino" -> Cupertino
                 "" -> null
                 else -> try {
                     parseCustomShape(value)

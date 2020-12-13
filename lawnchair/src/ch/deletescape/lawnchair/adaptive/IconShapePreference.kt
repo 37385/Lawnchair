@@ -22,12 +22,12 @@ package ch.deletescape.lawnchair.adaptive
 import android.content.Context
 import android.graphics.PorterDuff
 import android.os.Bundle
-import android.support.v4.app.DialogFragment
-import android.support.v7.app.AlertDialog
-import android.support.v7.preference.ListPreference
-import android.support.v7.preference.PreferenceDialogFragmentCompat
 import android.util.AttributeSet
 import android.view.View
+import androidx.appcompat.app.AlertDialog
+import androidx.fragment.app.DialogFragment
+import androidx.preference.ListPreference
+import androidx.preference.PreferenceDialogFragmentCompat
 import ch.deletescape.lawnchair.*
 import ch.deletescape.lawnchair.colors.overrides.ThemedListPreferenceDialogFragment
 import ch.deletescape.lawnchair.settings.ui.ControlledPreference
@@ -71,8 +71,9 @@ class IconShapePreference(context: Context, attrs: AttributeSet?) :
             addEntry(R.string.icon_shape_system_default, "")
             addEntry(R.string.icon_shape_circle, "circle")
             addEntry(R.string.icon_shape_square, "square")
-            addEntry(R.string.icon_shape_rounded_square, "roundedSquare")
+            addEntry(R.string.icon_shape_rounded_square, "cupertino")
             addEntry(R.string.icon_shape_squircle, "squircle")
+            addEntry(R.string.icon_shape_sammy, "sammy")
             addEntry(R.string.icon_shape_teardrop, "teardrop")
             addEntry(R.string.icon_shape_cylinder, "cylinder")
         }

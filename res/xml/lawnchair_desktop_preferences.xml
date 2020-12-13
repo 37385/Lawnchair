@@ -1,19 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
-<android.support.v7.preference.PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.preference.PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <ch.deletescape.lawnchair.preferences.StyledPreferenceCategory
         android:key="prefCat_desktopLayout"
         android:title="@string/pref_category_layout">
 
+        <!-- TODO: remove this
         <ch.deletescape.lawnchair.settings.ui.GridSizePreference
+            android:key="pref_desktop_grid_size"
+            android:title="@string/grid_size" />
+        -->
+
+        <ch.deletescape.lawnchair.settings.ui.DesktopGridSizePreference
             android:key="pref_desktop_grid_size"
             android:title="@string/grid_size" />
 
         <ch.deletescape.lawnchair.preferences.StyledSwitchPreferenceCompat
             android:defaultValue="false"
             android:key="pref_allowOverlap"
-            android:title="@string/overlap_placement"/>
+            android:title="@string/overlap_placement" />
+
+        <ch.deletescape.lawnchair.preferences.StyledSwitchPreferenceCompat
+            android:defaultValue="false"
+            android:key="pref_keepEmptyScreens"
+            android:title="@string/pref_keep_empty" />
 
         <ch.deletescape.lawnchair.preferences.StyledSwitchPreferenceCompat
             android:defaultValue="false"
@@ -25,6 +36,10 @@
     <ch.deletescape.lawnchair.preferences.StyledPreferenceCategory
         android:key="prefCat_desktopIcons"
         android:title="@string/pref_category_icons">
+
+        <ch.deletescape.lawnchair.preferences.PreviewPreference
+            android:key="pref_desktopIcons_preview"
+            app:previewLayout="@layout/desktop_icons_preview" />
 
         <ch.deletescape.lawnchair.preferences.StyledSwitchPreferenceCompat
             android:defaultValue="false"
@@ -74,6 +89,7 @@
             android:defaultValue="true"
             android:key="pref_add_icon_to_home"
             android:persistent="true"
+            android:summary="@string/auto_add_shortcuts_description"
             android:title="@string/auto_add_shortcuts_label"
             app:controllerClass=".AddIconToHomeController"/>
 
@@ -94,23 +110,24 @@
             android:title="@string/animation_type_title"
             android:summary="%s" />
 
-        <com.android.launcher3.views.ButtonPreference
+        <com.android.launcher3.settings.NotificationDotsPreference
             android:key="pref_icon_badging"
+            android:title="@string/notification_dots_title"
             android:persistent="false"
-            android:title="@string/icon_badging_title"
-            android:widgetLayout="@layout/notification_pref_warning">
+            android:widgetLayout="@layout/notification_pref_warning" >
             <intent android:action="android.settings.NOTIFICATION_SETTINGS">
-                <!-- This extra highlights the "Allow icon badges" field in Notification settings -->
+                <!-- This extra highlights the "Allow notification dots" field in Notification settings -->
                 <extra
                     android:name=":settings:fragment_args_key"
                     android:value="notification_badging" />
             </intent>
-        </com.android.launcher3.views.ButtonPreference>
+        </com.android.launcher3.settings.NotificationDotsPreference>
 
         <ch.deletescape.lawnchair.preferences.StyledSwitchPreferenceCompat
             android:key="pref_displayNotificationCount"
             android:persistent="true"
-            android:title="@string/pref_notification_count_title"/>
+            android:title="@string/pref_notification_count_title"
+            android:summary="@string/pref_notification_count_title"/>
 
         <ch.deletescape.lawnchair.preferences.StyledSwitchPreferenceCompat
             android:defaultValue="@bool/allow_rotation"
@@ -143,4 +160,4 @@
             android:persistent="true"
             android:title="@string/show_top_shadow_pref_title" />
     </ch.deletescape.lawnchair.preferences.StyledPreferenceCategory>
-</android.support.v7.preference.PreferenceScreen>
+</androidx.preference.PreferenceScreen>

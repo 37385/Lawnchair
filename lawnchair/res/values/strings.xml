@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-
     <string name="default_live_wallpaper" translatable="false">com.breel.wallpapers/com.breel.wallpapers.dioramas.lagos.LagosWallpaperService</string>
     <string name="app_releases_url" translatable="false">https://play.google.com/store/apps/details?id=amirz.rootless.nexuslauncher</string>
     <string name="app_donate_url" translatable="false">https://play.google.com/store/apps/details?id=amirz.donation</string>
@@ -314,6 +313,7 @@
     <string name="web_search_yandex">Yandex (in Browser)</string>
     <string name="web_search_naver">Naver (in Browser)</string>
     <string name="web_search_baidu">Baidu (in Browser)</string>
+    <string name="web_search_yahoo">Yahoo (in Browser)</string>
     <string name="search_provider_yandex">Yandex</string>
     <string name="search_provider_ddg">DuckDuckGo</string>
     <string name="search_provider_bing">Bing</string>
@@ -480,7 +480,6 @@
     <string name="about_summary_title">Summary</string>
 
     <string name="hide_app">Hide Shortcut</string>
-    <string name="hide_badge">Hide Badge</string>
     <string name="icon_shape_rounded_square">Rounded Square</string>
 
     <string name="hide_app_selected">“&#160;” hidden.</string>
@@ -614,6 +613,7 @@
     <string name="automatic_short">Auto</string>
 
     <string name="recent_task_option_force_stop">Force Stop</string>
+    <string name="recent_task_option_remove_task">Remove Task</string>
 
     <string name="drag_to_enable_packs">Drag Up to Enable</string>
     <string name="drag_to_disable_packs">Drag Down to Disable</string>
@@ -796,10 +796,31 @@
 
     <string name="icon_shape_system_default">Set by System</string>
     <string name="title_missing_notification_access">Notification access needed.</string>
-    
+
     <string name="activity_not_found">App not installed.</string>
-    
+
     <string name="out_of_space">No more room on the Desktop.</string>
     <string name="hotseat_out_of_space">No more room in the Dock.</string>
 
+    <string name="feed_provider">Feed Provider</string>
+    <string name="icon_shape_corner_lightsquircle">Light Squircle</string>
+    <string name="icon_shape_corner_strongsquircle">Strong Squircle</string>
+    <string name="icon_shape_corner_ultrasquircle">Ultra Squircle</string>
+
+    <string name="full_gesture_mode_title">Full gesture mode</string>
+    <string name="action_open_drawer_or_recents">Open recents/app drawer</string>
+    <string name="action_open_recents">Open recents</string>
+
+    <string name="pref_force_shapeless_summary">Attempts to load non-adaptive icons for all apps</string>
+    <string name="pref_force_shapeless">Force shapeless icons</string>
+
+    <string name="smartspace_provider_calendar">Calendar events</string>
+    <string name="action_press_back">Back button</string>
+    <string name="icon_shape_sammy">Sammy</string>
+    <string name="dock_enable_pref_title">Enable dock</string>
+
+    <string name="smartspace_now">now</string>
+    <string name="smartspace_in_time">in %1$s</string>
+
+    <string name="pref_keep_empty">Keep empty screens</string>
 </resources>

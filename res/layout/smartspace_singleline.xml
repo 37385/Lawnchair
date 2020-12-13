@@ -15,7 +15,7 @@
      limitations under the License.
 -->
 
-<android.support.constraint.ConstraintLayout
+<androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:launcher="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
@@ -73,8 +73,8 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
-                android:paddingLeft="10dp"
-                android:paddingRight="10dp"
+                android:paddingStart="10dp"
+                android:paddingEnd="4dp"
                 android:background="@drawable/bg_smartspace"
                 android:clickable="true"
                 android:ellipsize="end"
@@ -84,21 +84,13 @@
                 android:textColor="?workspaceTextColor"
                 android:textSize="@dimen/smartspace_title_size"/>
 
-            <ch.deletescape.lawnchair.smartspace.SmartspaceDividerView
-                android:id="@+id/title_sep"
-                android:layout_width="@dimen/smartspace_title_sep_width"
-                android:layout_height="20dp"
-                android:layout_gravity="center_vertical"
-                android:visibility="gone"
-                tools:visibility="visible"/>
-
             <LinearLayout
                 android:id="@+id/title_weather_content"
                 android:layout_width="wrap_content"
                 android:layout_height="fill_parent"
                 android:layout_gravity="center_vertical"
-                android:paddingLeft="10dp"
-                android:paddingRight="10dp"
+                android:paddingStart="4dp"
+                android:paddingEnd="10dp"
                 android:background="@drawable/bg_smartspace"
                 android:clickable="true"
                 android:clipChildren="false"
@@ -166,4 +158,4 @@
                 android:textSize="16dp"/>
         </LinearLayout>
     </LinearLayout>
-</android.support.constraint.ConstraintLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>

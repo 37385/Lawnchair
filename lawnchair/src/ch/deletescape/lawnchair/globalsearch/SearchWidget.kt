@@ -23,13 +23,18 @@ import android.content.Context
 import android.util.AttributeSet
 import android.view.View
 import android.widget.FrameLayout
+import ch.deletescape.lawnchair.allapps.BlurQsbLayout
+import ch.deletescape.lawnchair.getLauncherOrNull
+import com.android.launcher3.R
 import com.google.android.apps.nexuslauncher.qsb.HotseatQsbWidget
+import kotlinx.android.synthetic.main.launcher.view.*
 
 class SearchWidget(context: Context, attrs: AttributeSet?) : FrameLayout(context, attrs) {
     override fun addView(child: View?) {
         super.addView(child)
-        if (child is HotseatQsbWidget) {
+        if (child is BlurQsbLayout) {
             child.setWidgetMode(true)
+            child.scrimView = context.getLauncherOrNull()?.findViewById(R.id.scrim_view)
         }
     }
 }

@@ -16,8 +16,9 @@
 
 package com.android.launcher3.anim;
 
-import static com.android.launcher3.Utilities.SINGLE_FRAME_MS;
+import static com.android.launcher3.util.DefaultDisplay.getSingleFrameMs;
 
+import android.content.Context;
 import android.graphics.Path;
 import android.view.animation.AccelerateDecelerateInterpolator;
 import android.view.animation.AccelerateInterpolator;
@@ -62,6 +63,8 @@ public class Interpolators {
     public static final Interpolator EXAGGERATED_EASE;
     public static final Interpolator EXAGGERATED_EASE_REVERSED;
 
+    public static final Interpolator INSTANT = t -> 1;
+
     private static final int MIN_SETTLE_DURATION = 200;
     private static final float OVERSHOOT_FACTOR = 0.9f;
 
@@ -75,6 +78,7 @@ public class Interpolators {
     }
 
     public static final Interpolator OVERSHOOT_1_2 = new OvershootInterpolator(1.2f);
+    public static final Interpolator OVERSHOOT_1_7 = new OvershootInterpolator(1.7f);
 
     public static final Interpolator TOUCH_RESPONSE_INTERPOLATOR =
             new PathInterpolator(0.3f, 0f, 0.1f, 1f);
@@ -147,7 +151,8 @@ public class Interpolators {
     public static Interpolator clampToProgress(Interpolator interpolator, float lowerBound,
             float upperBound) {
         if (upperBound <= lowerBound) {
-            throw new IllegalArgumentException("lowerBound must be less than upperBound");
+            throw new IllegalArgumentException(String.format(
+                    "lowerBound (%f) must be less than upperBound (%f)", lowerBound, upperBound));
         }
         return t -> {
             if (t < lowerBound) {
@@ -194,13 +199,13 @@ public class Interpolators {
          * @param totalDistancePx The distance against which progress is calculated.
          */
         public OvershootParams(float startProgress, float overshootPastProgress,
-                float endProgress, float velocityPxPerMs, int totalDistancePx) {
+                float endProgress, float velocityPxPerMs, int totalDistancePx, Context context) {
             velocityPxPerMs = Math.abs(velocityPxPerMs);
             start = startProgress;
             int startPx = (int) (start * totalDistancePx);
             // Overshoot by about half a frame.
             float overshootBy = OVERSHOOT_FACTOR * velocityPxPerMs *
-                    SINGLE_FRAME_MS / totalDistancePx / 2;
+                    getSingleFrameMs(context) / totalDistancePx / 2;
             overshootBy = Utilities.boundToRange(overshootBy, 0.02f, 0.15f);
             end = overshootPastProgress + overshootBy;
             int endPx = (int) (end  * totalDistancePx);

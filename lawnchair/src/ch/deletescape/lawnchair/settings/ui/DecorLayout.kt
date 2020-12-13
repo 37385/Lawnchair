@@ -18,12 +18,10 @@
 package ch.deletescape.lawnchair.settings.ui
 
 import android.annotation.SuppressLint
-import android.annotation.TargetApi
 import android.content.Context
 import android.graphics.*
 import android.graphics.drawable.ColorDrawable
 import android.os.Environment
-import android.support.design.widget.Snackbar
 import android.util.AttributeSet
 import android.view.LayoutInflater
 import android.view.View
@@ -34,12 +32,8 @@ import ch.deletescape.lawnchair.blur.BlurWallpaperProvider
 import ch.deletescape.lawnchair.getBooleanAttr
 import ch.deletescape.lawnchair.getColorAttr
 import ch.deletescape.lawnchair.getDimenAttr
-import ch.deletescape.lawnchair.isVisible
 import ch.deletescape.lawnchair.util.parents
-import com.android.launcher3.Insettable
-import com.android.launcher3.InsettableFrameLayout
-import com.android.launcher3.R
-import com.android.launcher3.Utilities
+import com.android.launcher3.*
 import java.io.File
 
 @SuppressLint("ViewConstructor")
@@ -145,10 +139,6 @@ class DecorLayout(context: Context, private val window: Window) : InsettableFram
     override fun onClick(v: View?) {
         if (tapCount == 6 && allowDevOptions()) {
             Utilities.getLawnchairPrefs(context).developerOptionsEnabled = true
-            Snackbar.make(
-                    findViewById(R.id.content),
-                    R.string.developer_options_enabled,
-                    Snackbar.LENGTH_LONG).show()
             tapCount++
         } else if (tapCount < 6) {
             tapCount++
@@ -191,7 +181,9 @@ class DecorLayout(context: Context, private val window: Window) : InsettableFram
         private val insetsRect = RectF()
         private val contentRect = RectF()
 
-        private val dividerSize = Utilities.pxFromDp(1f, resources.displayMetrics).toFloat()
+        private val dividerSize = ResourceUtils.pxFromDp(1f, resources.displayMetrics).toFloat()
+
+        private val navigationMode = getNavigationMode()
 
         override fun onAttachedToWindow() {
             super.onAttachedToWindow()
@@ -223,12 +215,18 @@ class DecorLayout(context: Context, private val window: Window) : InsettableFram
         }
 
         private fun computeClip() {
-            contentRect.set(
-                    selfRect.left + insetsRect.left,
-                    selfRect.top + insetsRect.top,
-                    selfRect.right - insetsRect.right,
-                    selfRect.bottom - insetsRect.bottom
-            )
+            if (Utilities.ATLEAST_Q && navigationMode == 2) {
+                contentRect.set(
+                        selfRect.left, selfRect.top + insetsRect.top,
+                        selfRect.right, selfRect.bottom)
+            } else {
+                contentRect.set(
+                        selfRect.left + insetsRect.left,
+                        selfRect.top + insetsRect.top,
+                        selfRect.right - insetsRect.right,
+                        selfRect.bottom - insetsRect.bottom
+                               )
+            }
 
             dividerPath.reset()
             when {
@@ -273,6 +271,12 @@ class DecorLayout(context: Context, private val window: Window) : InsettableFram
 
         private fun isNavBarToLeftEdge(): Boolean {
             return insetsRect.bottom == 0f && insetsRect.left > 0
+        }
+
+        private fun getNavigationMode(): Int {
+            val id = context.resources.getIdentifier(
+                    "config_navBarInteractionMode", "integer", "android")
+            return if (id != 0) context.resources.getInteger(id) else 0
         }
     }
 

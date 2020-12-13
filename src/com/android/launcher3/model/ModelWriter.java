@@ -37,9 +37,10 @@ import com.android.launcher3.LauncherModel;
 import com.android.launcher3.LauncherModel.Callbacks;
 import com.android.launcher3.LauncherSettings.Favorites;
 import com.android.launcher3.LauncherSettings.Settings;
-import com.android.launcher3.logging.FileLog;
-import com.android.launcher3.ShortcutInfo;
+import com.android.launcher3.WorkspaceItemInfo;
+import com.android.launcher3.Utilities;
 import com.android.launcher3.config.FeatureFlags;
+import com.android.launcher3.icons.GraphicsUtils;
 import com.android.launcher3.util.ContentWriter;
 import com.android.launcher3.util.ItemInfoMatcher;
 import com.android.launcher3.util.LooperExecutor;
@@ -48,6 +49,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Executor;
+import java.util.function.Supplier;
 
 /**
  * Class for handling model updates.
@@ -81,7 +83,7 @@ public class ModelWriter {
     }
 
     private void updateItemInfoProps(
-            ItemInfo item, long container, long screenId, int cellX, int cellY) {
+            ItemInfo item, int container, int screenId, int cellX, int cellY) {
         item.container = container;
         item.cellX = cellX;
         item.cellY = cellY;
@@ -105,7 +107,7 @@ public class ModelWriter {
      * <container, screen, cellX, cellY>
      */
     public void addOrMoveItemInDatabase(ItemInfo item,
-            long container, long screenId, int cellX, int cellY) {
+            int container, int screenId, int cellX, int cellY) {
         if (item.container == ItemInfo.NO_ID) {
             // From all apps
             addItemToDatabase(item, container, screenId, cellX, cellY);
@@ -115,23 +117,22 @@ public class ModelWriter {
         }
     }
 
-    private void checkItemInfoLocked(long itemId, ItemInfo item, StackTraceElement[] stackTrace) {
+    private void checkItemInfoLocked(int itemId, ItemInfo item, StackTraceElement[] stackTrace) {
         ItemInfo modelItem = mBgDataModel.itemsIdMap.get(itemId);
         if (modelItem != null && item != modelItem) {
             // check all the data is consistent
-            if (modelItem instanceof ShortcutInfo && item instanceof ShortcutInfo) {
-                ShortcutInfo modelShortcut = (ShortcutInfo) modelItem;
-                ShortcutInfo shortcut = (ShortcutInfo) item;
-                if (modelShortcut.title.toString().equals(shortcut.title.toString()) &&
-                        modelShortcut.intent.filterEquals(shortcut.intent) &&
-                        modelShortcut.id == shortcut.id &&
-                        modelShortcut.itemType == shortcut.itemType &&
-                        modelShortcut.container == shortcut.container &&
-                        modelShortcut.screenId == shortcut.screenId &&
-                        modelShortcut.cellX == shortcut.cellX &&
-                        modelShortcut.cellY == shortcut.cellY &&
-                        modelShortcut.spanX == shortcut.spanX &&
-                        modelShortcut.spanY == shortcut.spanY) {
+            if (!Utilities.IS_DEBUG_DEVICE && !FeatureFlags.IS_DOGFOOD_BUILD &&
+                    modelItem instanceof WorkspaceItemInfo && item instanceof WorkspaceItemInfo) {
+                if (modelItem.title.toString().equals(item.title.toString()) &&
+                        modelItem.getIntent().filterEquals(item.getIntent()) &&
+                        modelItem.id == item.id &&
+                        modelItem.itemType == item.itemType &&
+                        modelItem.container == item.container &&
+                        modelItem.screenId == item.screenId &&
+                        modelItem.cellX == item.cellX &&
+                        modelItem.cellY == item.cellY &&
+                        modelItem.spanX == item.spanX &&
+                        modelItem.spanY == item.spanY) {
                     // For all intents and purposes, this is the same object
                     return;
                 }
@@ -156,24 +157,22 @@ public class ModelWriter {
      * Move an item in the DB to a new <container, screen, cellX, cellY>
      */
     public void moveItemInDatabase(final ItemInfo item,
-            long container, long screenId, int cellX, int cellY) {
+            int container, int screenId, int cellX, int cellY) {
         updateItemInfoProps(item, container, screenId, cellX, cellY);
-
-        final ContentWriter writer = new ContentWriter(mContext)
-                .put(Favorites.CONTAINER, item.container)
-                .put(Favorites.CELLX, item.cellX)
-                .put(Favorites.CELLY, item.cellY)
-                .put(Favorites.RANK, item.rank)
-                .put(Favorites.SCREEN, item.screenId);
-
-        enqueueDeleteRunnable(new UpdateItemRunnable(item, writer));
+        enqueueDeleteRunnable(new UpdateItemRunnable(item, () ->
+                new ContentWriter(mContext)
+                        .put(Favorites.CONTAINER, item.container)
+                        .put(Favorites.CELLX, item.cellX)
+                        .put(Favorites.CELLY, item.cellY)
+                        .put(Favorites.RANK, item.rank)
+                        .put(Favorites.SCREEN, item.screenId)));
     }
 
     /**
      * Move items in the DB to a new <container, screen, cellX, cellY>. We assume that the
      * cellX, cellY have already been updated on the ItemInfos.
      */
-    public void moveItemsInDatabase(final ArrayList<ItemInfo> items, long container, int screen) {
+    public void moveItemsInDatabase(final ArrayList<ItemInfo> items, int container, int screen) {
         ArrayList<ContentValues> contentValues = new ArrayList<>();
         int count = items.size();
 
@@ -197,42 +196,41 @@ public class ModelWriter {
      * Move and/or resize item in the DB to a new <container, screen, cellX, cellY, spanX, spanY>
      */
     public void modifyItemInDatabase(final ItemInfo item,
-            long container, long screenId, int cellX, int cellY, int spanX, int spanY) {
+            int container, int screenId, int cellX, int cellY, int spanX, int spanY) {
         updateItemInfoProps(item, container, screenId, cellX, cellY);
         item.spanX = spanX;
         item.spanY = spanY;
 
-        final ContentWriter writer = new ContentWriter(mContext)
-                .put(Favorites.CONTAINER, item.container)
-                .put(Favorites.CELLX, item.cellX)
-                .put(Favorites.CELLY, item.cellY)
-                .put(Favorites.RANK, item.rank)
-                .put(Favorites.SPANX, item.spanX)
-                .put(Favorites.SPANY, item.spanY)
-                .put(Favorites.SCREEN, item.screenId);
-
-        mWorkerExecutor.execute(new UpdateItemRunnable(item, writer));
+        mWorkerExecutor.execute(new UpdateItemRunnable(item, () ->
+                new ContentWriter(mContext)
+                        .put(Favorites.CONTAINER, item.container)
+                        .put(Favorites.CELLX, item.cellX)
+                        .put(Favorites.CELLY, item.cellY)
+                        .put(Favorites.RANK, item.rank)
+                        .put(Favorites.SPANX, item.spanX)
+                        .put(Favorites.SPANY, item.spanY)
+                        .put(Favorites.SCREEN, item.screenId)));
     }
 
-    private void executeUpdateItem(ItemInfo item, ContentWriter writer) {
+    private void executeUpdateItem(ItemInfo item, Supplier<ContentWriter> writer) {
         mWorkerExecutor.execute(new UpdateItemRunnable(item, writer));
     }
 
     public static void modifyItemInDatabase(Context context, final ItemInfo item, String alias,
-                                            String swipeUpAction, boolean badgeVisible,
+                                            String swipeUpAction,
                                             IconPackManager.CustomIconEntry iconEntry, Bitmap icon,
                                             boolean updateIcon, boolean reload) {
-        final ContentWriter writer = new ContentWriter(context);
-        writer.put(Favorites.TITLE_ALIAS, alias);
-        writer.put(Favorites.SWIPE_UP_ACTION, swipeUpAction);
-        writer.put(Favorites.BADGE_VISIBLE, badgeVisible ? 1 : 0);
-        if (updateIcon) {
-            writer.put(Favorites.CUSTOM_ICON, icon != null ? Utilities.flattenBitmap(icon) : null);
-            writer.put(Favorites.CUSTOM_ICON_ENTRY, iconEntry != null ? iconEntry.toString() : null);
-        }
-
+        LauncherAppState.getInstance(context).getLauncher().getModelWriter().executeUpdateItem(item, () -> {
+            final ContentWriter writer = new ContentWriter(context);
+            writer.put(Favorites.TITLE_ALIAS, alias);
+            writer.put(Favorites.SWIPE_UP_ACTION, swipeUpAction);
+            if (updateIcon) {
+                writer.put(Favorites.CUSTOM_ICON, icon != null ? GraphicsUtils.flattenBitmap(icon) : null);
+                writer.put(Favorites.CUSTOM_ICON_ENTRY, iconEntry != null ? iconEntry.toString() : null);
+            }
+            return writer;
+        });
         if (reload) {
-            LauncherAppState.getInstance(context).getLauncher().getModelWriter().executeUpdateItem(item, writer);
             LauncherAppState.getInstance(context).getModel().forceReload();
         }
     }
@@ -241,9 +239,11 @@ public class ModelWriter {
      * Update an item to the database in a specified container.
      */
     public void updateItemInDatabase(ItemInfo item) {
-        ContentWriter writer = new ContentWriter(mContext);
-        item.onAddToDatabase(writer);
-        mWorkerExecutor.execute(new UpdateItemRunnable(item, writer));
+        mWorkerExecutor.execute(new UpdateItemRunnable(item, () -> {
+            ContentWriter writer = new ContentWriter(mContext);
+            item.onAddToDatabase(writer);
+            return writer;
+        }));
     }
 
     /**
@@ -251,20 +251,21 @@ public class ModelWriter {
      * cellY fields of the item. Also assigns an ID to the item.
      */
     public void addItemToDatabase(final ItemInfo item,
-            long container, long screenId, int cellX, int cellY) {
+            int container, int screenId, int cellX, int cellY) {
         updateItemInfoProps(item, container, screenId, cellX, cellY);
 
-        final ContentWriter writer = new ContentWriter(mContext);
         final ContentResolver cr = mContext.getContentResolver();
-        item.onAddToDatabase(writer);
-
-        item.id = Settings.call(cr, Settings.METHOD_NEW_ITEM_ID).getLong(Settings.EXTRA_VALUE);
-        writer.put(Favorites._ID, item.id);
+        item.id = Settings.call(cr, Settings.METHOD_NEW_ITEM_ID).getInt(Settings.EXTRA_VALUE);
 
         ModelVerifier verifier = new ModelVerifier();
-
         final StackTraceElement[] stackTrace = new Throwable().getStackTrace();
         mWorkerExecutor.execute(() -> {
+            // Write the item on background thread, as some properties might have been updated in
+            // the background.
+            final ContentWriter writer = new ContentWriter(mContext);
+            item.onAddToDatabase(writer);
+            writer.put(Favorites._ID, item.id);
+
             cr.insert(Favorites.CONTENT_URI, writer.getValues(mContext));
 
             synchronized (mBgDataModel) {
@@ -340,7 +341,7 @@ public class ModelWriter {
     /**
      * Delete operations tracked using {@link #enqueueDeleteRunnable} will only be called
      * if {@link #commitDelete} is called. Note that one of {@link #commitDelete()} or
-     * {@link #abortDelete()} MUST be called after this method, or else all delete
+     * {@link #abortDelete} MUST be called after this method, or else all delete
      * operations will remain uncommitted indefinitely.
      */
     public void prepareToUndoDelete() {
@@ -355,10 +356,10 @@ public class ModelWriter {
 
     /**
      * If {@link #prepareToUndoDelete} has been called, we store the Runnable to be run when
-     * {@link #commitDelete()} is called (or abandoned if {@link #abortDelete()} is called).
+     * {@link #commitDelete()} is called (or abandoned if {@link #abortDelete} is called).
      * Otherwise, we run the Runnable immediately.
      */
-    public void enqueueDeleteRunnable(Runnable r) {
+    private void enqueueDeleteRunnable(Runnable r) {
         if (mPreparingToUndo) {
             mDeleteRunnables.add(r);
         } else {
@@ -384,10 +385,10 @@ public class ModelWriter {
 
     private class UpdateItemRunnable extends UpdateItemBaseRunnable {
         private final ItemInfo mItem;
-        private final ContentWriter mWriter;
-        private final long mItemId;
+        private final Supplier<ContentWriter> mWriter;
+        private final int mItemId;
 
-        UpdateItemRunnable(ItemInfo item, ContentWriter writer) {
+        UpdateItemRunnable(ItemInfo item, Supplier<ContentWriter> writer) {
             mItem = item;
             mWriter = writer;
             mItemId = item.id;
@@ -396,7 +397,8 @@ public class ModelWriter {
         @Override
         public void run() {
             Uri uri = Favorites.getContentUri(mItemId);
-            mContext.getContentResolver().update(uri, mWriter.getValues(mContext), null, null);
+            mContext.getContentResolver().update(uri, mWriter.get().getValues(mContext),
+                    null, null);
             updateItemArrays(mItem, mItemId);
         }
     }
@@ -416,7 +418,7 @@ public class ModelWriter {
             int count = mItems.size();
             for (int i = 0; i < count; i++) {
                 ItemInfo item = mItems.get(i);
-                final long itemId = item.id;
+                final int itemId = item.id;
                 final Uri uri = Favorites.getContentUri(itemId);
                 ContentValues values = mValues.get(i);
 
@@ -439,7 +441,7 @@ public class ModelWriter {
             mStackTrace = new Throwable().getStackTrace();
         }
 
-        protected void updateItemArrays(ItemInfo item, long itemId) {
+        protected void updateItemArrays(ItemInfo item, int itemId) {
             // Lock on mBgLock *after* the db operation
             synchronized (mBgDataModel) {
                 checkItemInfoLocked(itemId, item, mStackTrace);

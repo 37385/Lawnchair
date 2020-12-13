@@ -19,10 +19,12 @@ package com.android.launcher3.compat;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.pm.PackageInstaller;
-import android.support.annotation.NonNull;
+import android.os.UserHandle;
 
 import java.util.HashMap;
 import java.util.List;
+
+import androidx.annotation.NonNull;
 
 public abstract class PackageInstallerCompat {
 
@@ -46,6 +48,11 @@ public abstract class PackageInstallerCompat {
      * @return a map of active installs to their progress
      */
     public abstract HashMap<String, PackageInstaller.SessionInfo> updateAndGetActiveSessionCache();
+
+    /**
+     * @return an active SessionInfo for {@param pkg} or null if none exists.
+     */
+    public abstract PackageInstaller.SessionInfo getActiveSessionInfo(UserHandle user, String pkg);
 
     public abstract void onStop();
 

@@ -21,16 +21,17 @@ import android.app.Notification
 import android.app.PendingIntent
 import android.content.*
 import android.content.pm.PackageManager
+import android.content.pm.PackageManager.PERMISSION_GRANTED
 import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Handler
 import android.os.HandlerThread
 import android.provider.Settings
 import android.service.notification.StatusBarNotification
-import android.support.annotation.Keep
 import android.text.TextUtils
 import android.util.Log
 import android.view.View
+import androidx.annotation.Keep
 import ch.deletescape.lawnchair.*
 import ch.deletescape.lawnchair.settings.ui.SettingsActivity
 import ch.deletescape.lawnchair.settings.ui.SettingsActivity.NOTIFICATION_BADGING
@@ -44,6 +45,7 @@ import com.android.launcher3.Utilities
 import com.android.launcher3.notification.NotificationListener
 import com.android.launcher3.util.PackageManagerHelper
 import java.util.concurrent.TimeUnit
+import kotlin.collections.ArrayList
 
 class LawnchairSmartspaceController(val context: Context) {
 
@@ -132,6 +134,10 @@ class LawnchairSmartspaceController(val context: Context) {
         listeners.forEach { it.onDataUpdated(weatherData, cardData) }
     }
 
+    fun requestUpdate(listener: Listener) {
+        listener.onDataUpdated(weatherData, cardData)
+    }
+
     fun addListener(listener: Listener) {
         listeners.add(listener)
         listener.onDataUpdated(weatherData, cardData)
@@ -217,13 +223,13 @@ class LawnchairSmartspaceController(val context: Context) {
                     Intent.FLAG_ACTIVITY_NEW_TASK,
                     Intent.FLAG_ACTIVITY_NEW_TASK, 0, opts)
         } else if (data.forecastIntent != null) {
-            launcher.startActivitySafely(v, data.forecastIntent, null)
+            launcher.startActivitySafely(v, data.forecastIntent, null, null)
         } else if (PackageManagerHelper.isAppEnabled(launcher.packageManager, "com.google.android.googlequicksearchbox", 0)) {
             val intent = Intent(Intent.ACTION_VIEW)
             intent.data = Uri.parse("dynact://velour/weather/ProxyActivity")
             intent.component = ComponentName("com.google.android.googlequicksearchbox",
                     "com.google.android.apps.gsa.velour.DynamicActivityTrampoline")
-            launcher.startActivitySafely(v, intent, null)
+            launcher.startActivitySafely(v, intent, null, null)
         } else {
             Utilities.openURLinBrowser(launcher, data.forecastUrl,
                     launcher.getViewBounds(v), launcher.getActivityLaunchOptions(v).toBundle())
@@ -253,10 +259,19 @@ class LawnchairSmartspaceController(val context: Context) {
         protected val context = controller.context
         protected val resources = context.resources
 
-        open fun requiresSetup() = false
+        protected open val requiredPermissions = emptyList<String>()
+
+        open fun requiresSetup() = !checkPermissionGranted()
 
         open fun startSetup(onFinish: (Boolean) -> Unit) {
-            onFinish(true)
+            if (checkPermissionGranted()) {
+                onFinish(true)
+                return
+            }
+
+            BlankActivity.requestPermissions(context, requiredPermissions.toTypedArray(), 1031) { _, _, results ->
+                onFinish(results.all { it == PERMISSION_GRANTED })
+            }
         }
 
         open fun startListening() {
@@ -302,6 +317,11 @@ class LawnchairSmartspaceController(val context: Context) {
                 }
             }
             return getApp(sbn.packageName)
+        }
+
+        private fun checkPermissionGranted(): Boolean {
+            val context = controller.context
+            return requiredPermissions.all { context.checkSelfPermission(it) == PERMISSION_GRANTED }
         }
 
         companion object {
@@ -366,7 +386,7 @@ class LawnchairSmartspaceController(val context: Context) {
 
         override fun startSetup(onFinish: (Boolean) -> Unit) {
             if (checkNotificationAccess()) {
-                onFinish(true)
+                super.startSetup(onFinish)
                 return
             }
 
@@ -421,7 +441,7 @@ class LawnchairSmartspaceController(val context: Context) {
                            val pendingIntent: PendingIntent? = null) {
 
         fun getTitle(unit: Temperature.Unit): String {
-            return "${temperature.inUnit(unit)} ${unit.suffix}"
+            return "${temperature.inUnit(unit)}${unit.suffix}"
         }
     }
 
@@ -531,6 +551,7 @@ class LawnchairSmartspaceController(val context: Context) {
                 Pair(BatteryStatusProvider::class.java.name, R.string.battery_status),
                 Pair(PersonalityProvider::class.java.name, R.string.personality_provider),
                 Pair(OnboardingProvider::class.java.name, R.string.onbording),
+                Pair(CalendarEventProvider::class.java.name, R.string.smartspace_provider_calendar),
                 Pair(FakeDataProvider::class.java.name, R.string.weather_provider_testing))
 
         fun getDisplayName(providerName: String): Int {

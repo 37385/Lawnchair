@@ -18,8 +18,8 @@
 package ch.deletescape.lawnchair.colors.resolvers
 
 import android.graphics.Color
-import android.support.annotation.Keep
-import android.support.v4.graphics.ColorUtils
+import androidx.annotation.Keep
+import androidx.core.graphics.ColorUtils
 import ch.deletescape.lawnchair.colors.ThemeAttributeColorResolver
 import ch.deletescape.lawnchair.foregroundColor
 import ch.deletescape.lawnchair.lawnchairPrefs
@@ -50,7 +50,7 @@ class DrawerLabelAutoResolver(config: Config) : ThemeAttributeColorResolver(conf
 
     override fun resolveColor(): Int {
         if (prefs.brightnessTheme) {
-            val bg = ColorUtils.blendARGB(Color.BLACK, Color.WHITE, brightness)
+            val bg = ColorUtils.setAlphaComponent(ColorUtils.blendARGB(Color.BLACK, Color.WHITE, brightness), 255)
             val fg = ColorUtils.blendARGB(Color.WHITE, Color.BLACK, brightness)
             return IconPalette.ensureTextContrast(fg, bg)
         }

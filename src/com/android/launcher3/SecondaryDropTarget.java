@@ -160,7 +160,7 @@ public class SecondaryDropTarget extends ButtonDropTarget implements OnAlarmList
         Intent intent = null;
         UserHandle user = null;
         if (item != null &&
-                item.itemType == LauncherSettings.BaseLauncherColumns.ITEM_TYPE_APPLICATION) {
+                item.itemType == LauncherSettings.Favorites.ITEM_TYPE_APPLICATION) {
             intent = item.getIntent();
             user = item.user;
         }
@@ -189,7 +189,7 @@ public class SecondaryDropTarget extends ButtonDropTarget implements OnAlarmList
             DeferredOnComplete deferred = (DeferredOnComplete) d.dragSource;
             if (target != null) {
                 deferred.mPackageName = target.getPackageName();
-                mLauncher.setOnResumeCallback(deferred);
+                mLauncher.addOnResumeCallback(deferred);
             } else {
                 deferred.sendFailure();
             }
@@ -256,7 +256,7 @@ public class SecondaryDropTarget extends ButtonDropTarget implements OnAlarmList
             Intent customizeIntent = getWidgetCustomizeIntent(view);
             if (customizeIntent != null) {
                 Launcher launcher = Launcher.getLauncher(view.getContext());
-                launcher.startActivitySafely(view, customizeIntent, null);
+                launcher.startActivitySafely(view, customizeIntent, null, null);
             }
             return null;
         }

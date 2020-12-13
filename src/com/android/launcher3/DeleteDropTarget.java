@@ -16,6 +16,9 @@
 
 package com.android.launcher3;
 
+import static com.android.launcher3.userevent.nano.LauncherLogProto.Action.Touch.TAP;
+import static com.android.launcher3.userevent.nano.LauncherLogProto.ControlType.UNDO;
+
 import android.content.Context;
 import android.text.TextUtils;
 import android.util.AttributeSet;
@@ -62,8 +65,12 @@ public class DeleteDropTarget extends ButtonDropTarget {
      */
     @Override
     public boolean supportsAccessibilityDrop(ItemInfo info, View view) {
-        return (info instanceof ShortcutInfo)
-                || (info instanceof LauncherAppWidgetInfo)
+        if (info instanceof WorkspaceItemInfo) {
+            // Support the action unless the item is in a context menu.
+            return info.screenId >= 0;
+        }
+
+        return (info instanceof LauncherAppWidgetInfo)
                 || (info instanceof FolderInfo);
     }
 
@@ -85,6 +92,7 @@ public class DeleteDropTarget extends ButtonDropTarget {
             mText = getResources().getString(canRemove(item)
                     ? R.string.remove_drop_target_label
                     : android.R.string.cancel);
+            setContentDescription(mText);
             requestLayout();
         }
     }
@@ -116,8 +124,12 @@ public class DeleteDropTarget extends ButtonDropTarget {
             int itemPage = mLauncher.getWorkspace().getCurrentPage();
             onAccessibilityDrop(null, item);
             ModelWriter modelWriter = mLauncher.getModelWriter();
+            Runnable onUndoClicked = () -> {
+                modelWriter.abortDelete(itemPage);
+                mLauncher.getUserEventDispatcher().logActionOnControl(TAP, UNDO);
+            };
             Snackbar.show(mLauncher, R.string.item_removed, R.string.undo,
-                    modelWriter::commitDelete, () -> modelWriter.abortDelete(itemPage));
+                    modelWriter::commitDelete, onUndoClicked);
         }
     }
 

@@ -23,25 +23,22 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.*
 import android.graphics.drawable.AdaptiveIconDrawable
-import android.os.Handler
-import android.support.v4.graphics.PathParser
 import android.text.TextUtils
-import com.android.launcher3.graphics.IconShape as L3IconShape
+import androidx.annotation.Keep
+import androidx.core.graphics.PathParser
 import ch.deletescape.lawnchair.iconpack.AdaptiveIconCompat
 import ch.deletescape.lawnchair.lawnchairPrefs
-import ch.deletescape.lawnchair.runOnMainThread
 import ch.deletescape.lawnchair.util.LawnchairSingletonHolder
-import com.android.launcher3.LauncherAppState
-import com.android.launcher3.LauncherModel
+import com.android.launcher3.InvariantDeviceProfile
 import com.android.launcher3.Utilities
-import com.android.launcher3.graphics.IconShapeOverride
+import com.android.launcher3.icons.GraphicsUtils
 import java.lang.RuntimeException
 
 class IconShapeManager(private val context: Context) {
 
     private val systemIconShape = getSystemShape()
     var iconShape by context.lawnchairPrefs.StringBasedPref(
-            "pref_iconShape", systemIconShape, ::onShapeChanged,
+            "pref_iconShape", systemIconShape, AdaptiveIconCompat::onShapeChanged,
             {
                 IconShape.fromString(it) ?: systemIconShape
             }, IconShape::toString) { /* no dispose */ }
@@ -53,15 +50,26 @@ class IconShapeManager(private val context: Context) {
     @SuppressLint("RestrictedApi")
     private fun migratePref() {
         // Migrate from old path-based override
-        val override = IconShapeOverride.getAppliedValue(context)
+        val override = getLegacyValue()
         if (!TextUtils.isEmpty(override)) {
             try {
                 iconShape = findNearestShape(PathParser.createPathFromPathData(override))
-                Utilities.getPrefs(context).edit().remove(IconShapeOverride.KEY_PREFERENCE).apply()
+                Utilities.getPrefs(context).edit().remove(KEY_LEGACY_PREFERENCE).apply()
             } catch (e: RuntimeException) {
                 // Just ignore the error
             }
         }
+    }
+
+    fun getLegacyValue(): String {
+        val devValue = Utilities.getDevicePrefs(context).getString(KEY_LEGACY_PREFERENCE, "")
+        if (!TextUtils.isEmpty(devValue)) {
+            // Migrate to general preferences to back up shape overrides
+            Utilities.getPrefs(context).edit().putString(KEY_LEGACY_PREFERENCE, devValue).apply()
+            Utilities.getDevicePrefs(context).edit().remove(KEY_LEGACY_PREFERENCE).apply()
+        }
+
+        return Utilities.getPrefs(context).getString(KEY_LEGACY_PREFERENCE, "")!!
     }
 
     private fun getSystemShape(): IconShape {
@@ -76,54 +84,50 @@ class IconShapeManager(private val context: Context) {
             }
 
             override fun toString() = ""
+
+            override fun getHashString(): String {
+                return InvariantDeviceProfile.getSystemIconShapePath(context)
+            }
         }
     }
 
     private fun findNearestShape(comparePath: Path): IconShape {
-        val clip = Region(0, 0, 100, 100)
-        val systemRegion = Region().apply {
+        val size = 200
+        val clip = Region(0, 0, size, size)
+        val iconR = Region().apply {
             setPath(comparePath, clip)
         }
-        val pathRegion = Region()
-        val path = Path()
-        val rect = Rect()
+        val shapePath = Path()
+        val shapeR = Region()
         return listOf(
                 IconShape.Circle,
                 IconShape.Square,
                 IconShape.RoundedSquare,
                 IconShape.Squircle,
+                IconShape.Sammy,
                 IconShape.Teardrop,
                 IconShape.Cylinder).minBy {
-            path.reset()
-            it.addShape(path, 0f, 0f, 50f)
-            pathRegion.setPath(path, clip)
-            pathRegion.op(systemRegion, Region.Op.XOR)
+            shapePath.reset()
+            it.addShape(shapePath, 0f, 0f, size / 2f)
+            shapeR.setPath(shapePath, clip)
+            shapeR.op(iconR, Region.Op.XOR)
 
-            var difference = 0
-            val iter = RegionIterator(pathRegion)
-            while (iter.next(rect)) {
-                difference += rect.width() * rect.height()
-            }
-
-            difference
+            GraphicsUtils.getArea(shapeR)
         }!!
-    }
-
-    private fun onShapeChanged() {
-        Handler(LauncherModel.getWorkerLooper()).post {
-            LauncherAppState.getInstance(context).reloadIconCache()
-
-            runOnMainThread {
-                AdaptiveIconCompat.resetMask()
-                L3IconShape.init(context)
-                context.lawnchairPrefs.recreate()
-            }
-        }
     }
 
     companion object : LawnchairSingletonHolder<IconShapeManager>(::IconShapeManager) {
 
+        private const val KEY_LEGACY_PREFERENCE = "pref_override_icon_shape"
+
         @JvmStatic
-        fun getInstanceNoCreate() = dangerousGetInstance()
+        fun getWindowTransitionRadius(context: Context): Float {
+            return getInstance(context).iconShape.windowTransitionRadius
+        }
+
+        @Keep
+        @JvmStatic
+        @Suppress("unused") /** Used in AdaptiveIconCompat to get the mask path **/
+        fun getAdaptiveIconMaskPath() = dangerousGetInstance()!!.iconShape.getMaskPath()
     }
 }

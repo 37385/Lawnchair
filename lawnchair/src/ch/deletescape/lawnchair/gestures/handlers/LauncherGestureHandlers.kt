@@ -22,11 +22,10 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.drawable.Drawable
 import android.os.UserHandle
-import android.support.annotation.Keep
 import android.util.Log
 import android.view.View
 import android.widget.Toast
-import ch.deletescape.lawnchair.animations.LawnchairAppTransitionManagerImpl
+import androidx.annotation.Keep
 import ch.deletescape.lawnchair.gestures.GestureController
 import ch.deletescape.lawnchair.gestures.GestureHandler
 import ch.deletescape.lawnchair.gestures.ui.SelectAppActivity
@@ -35,13 +34,14 @@ import com.android.launcher3.LauncherState
 import ch.deletescape.lawnchair.globalsearch.SearchProviderController
 import ch.deletescape.lawnchair.lawnchairPrefs
 import com.android.launcher3.R
-import com.android.launcher3.Utilities
+import com.android.launcher3.Utilities.makeComponentKey
 import com.android.launcher3.compat.LauncherAppsCompat
 import com.android.launcher3.compat.UserManagerCompat
 import com.android.launcher3.shortcuts.DeepShortcutManager
 import com.android.launcher3.util.ComponentKey
 import com.android.launcher3.views.OptionsPopupView
 import com.android.launcher3.widget.WidgetsFullSheet
+import com.android.quickstep.SysUINavigationMode
 import ninja.sesame.lib.bridge.v1.SesameFrontend
 import org.json.JSONObject
 
@@ -49,9 +49,17 @@ import org.json.JSONObject
 open class OpenDrawerGestureHandler(context: Context, config: JSONObject?) : GestureHandler(context, config),
         VerticalSwipeGestureHandler, StateChangeGestureHandler {
 
-    override val displayName: String = context.getString(R.string.action_open_drawer)
+    override val displayName: String get() = context.getString(getNameRes())
     override val iconResource: Intent.ShortcutIconResource by lazy { Intent.ShortcutIconResource.fromContext(context, R.mipmap.ic_allapps_adaptive) }
     override val requiresForeground = true
+
+    private fun getNameRes(): Int {
+        if (SysUINavigationMode.INSTANCE.get(context).mode == SysUINavigationMode.Mode.NO_BUTTON) {
+            return R.string.action_open_drawer_or_recents
+        } else {
+            return R.string.action_open_drawer
+        }
+    }
 
     override fun onGestureTrigger(controller: GestureController, view: View?) {
         controller.launcher.stateManager.goToState(LauncherState.ALL_APPS, true, getOnCompleteRunnable(controller))
@@ -133,7 +141,6 @@ class StartAppSearchGestureHandler(context: Context, config: JSONObject?) : Open
 
     override val displayName: String = context.getString(R.string.action_app_search)
     override val iconResource: Intent.ShortcutIconResource by lazy { Intent.ShortcutIconResource.fromContext(context, R.drawable.ic_search_shadow) }
-    override val requiresForeground = Utilities.ATLEAST_P
 
     override fun getOnCompleteRunnable(controller: GestureController): Runnable? {
         return Runnable { controller.launcher.appsView.searchUiManager.startSearch() }
@@ -197,7 +204,7 @@ class StartAppGestureHandler(context: Context, config: JSONObject?) : GestureHan
             appName = config.getString("appName")
             type = if (config.has("type")) config.getString("type") else "app"
             if (type == "app") {
-                target = ComponentKey(context, config.getString("target"))
+                target = makeComponentKey(context, config.getString("target"))
             } else {
                 intent = Intent.parseUri(config.getString("intent"), 0)
                 user = UserManagerCompat.getInstance(context).getUserForSerialNumber(config.getLong("user"))
@@ -231,7 +238,7 @@ class StartAppGestureHandler(context: Context, config: JSONObject?) : GestureHan
             type = data.getStringExtra("type")
             when (type) {
                 "app" -> {
-                    target = ComponentKey(context, data.getStringExtra("target"))
+                    target = makeComponentKey(context, data.getStringExtra("target"))
                 }
                 "shortcut" -> {
                     intent = Intent.parseUri(data.getStringExtra("intent"), 0)
@@ -260,19 +267,14 @@ class StartAppGestureHandler(context: Context, config: JSONObject?) : GestureHan
                 } catch (e: NullPointerException){
                     // App is probably not installed anymore, show a Toast
                     Toast.makeText(context, R.string.failed, Toast.LENGTH_LONG).show()
+                } catch (e: SecurityException) {
+                    // App is probably not installed anymore, show a Toast
+                    Toast.makeText(context, R.string.failed, Toast.LENGTH_LONG).show()
                 }
-                val transitionManager = controller.launcher.launcherAppTransitionManager
-                        as? LawnchairAppTransitionManagerImpl
-                transitionManager?.playLaunchAnimation(controller.launcher, view,
-                        Intent().setComponent(target!!.componentName))
             }
             "shortcut" -> {
-                if (id?.startsWith("sesame_") == true) {
-                    context.startActivity(SesameFrontend.addPackageAuth(context, intent!!), opts)
-                } else {
-                    DeepShortcutManager.getInstance(context)
-                            .startShortcut(packageName, id, intent, opts, user)
-                }
+                DeepShortcutManager.getInstance(context)
+                        .startShortcut(packageName, id, null, opts, user)
             }
         }
     }

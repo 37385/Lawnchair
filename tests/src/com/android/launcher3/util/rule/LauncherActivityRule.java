@@ -18,9 +18,8 @@ package com.android.launcher3.util.rule;
 import android.app.Activity;
 import android.app.Application;
 import android.app.Application.ActivityLifecycleCallbacks;
-import android.content.Intent;
 import android.os.Bundle;
-import android.support.test.InstrumentationRegistry;
+import androidx.test.InstrumentationRegistry;
 
 import com.android.launcher3.Launcher;
 import com.android.launcher3.Workspace.ItemOperator;
@@ -48,36 +47,13 @@ public class LauncherActivityRule implements TestRule {
     }
 
     public Callable<Boolean> itemExists(final ItemOperator op) {
-        return new Callable<Boolean>() {
-
-            @Override
-            public Boolean call() throws Exception {
-                Launcher launcher = getActivity();
-                if (launcher == null) {
-                    return false;
-                }
-                return launcher.getWorkspace().getFirstMatch(op) != null;
+        return () -> {
+            Launcher launcher = getActivity();
+            if (launcher == null) {
+                return false;
             }
+            return launcher.getWorkspace().getFirstMatch(op) != null;
         };
-    }
-
-    /**
-     * Starts the launcher activity in the target package.
-     */
-    public void startLauncher() {
-        InstrumentationRegistry.getInstrumentation().startActivitySync(getHomeIntent());
-    }
-
-    public void returnToHome() {
-        InstrumentationRegistry.getTargetContext().startActivity(getHomeIntent());
-        InstrumentationRegistry.getInstrumentation().waitForIdleSync();
-    }
-
-    public static Intent getHomeIntent() {
-        return new Intent(Intent.ACTION_MAIN)
-                .addCategory(Intent.CATEGORY_HOME)
-                .setPackage(InstrumentationRegistry.getTargetContext().getPackageName())
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
     }
 
     private class MyStatement extends Statement implements ActivityLifecycleCallbacks {

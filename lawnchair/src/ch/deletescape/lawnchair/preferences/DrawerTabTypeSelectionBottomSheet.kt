@@ -20,19 +20,19 @@ package ch.deletescape.lawnchair.preferences
 import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.drawable.RippleDrawable
-import android.support.v4.graphics.ColorUtils
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.Space
 import android.widget.TextView
+import androidx.core.graphics.ColorUtils
 import ch.deletescape.lawnchair.*
 import ch.deletescape.lawnchair.colors.ColorEngine
 import ch.deletescape.lawnchair.settings.ui.SettingsBottomSheet
 import com.android.launcher3.R
 
-class DrawerTabTypeSelectionBottomSheet(context: Context, selectionItems: Map<Int, Array<Int>>, callback: (which: Int) -> Unit): FrameLayout(context) {
+class DrawerTabTypeSelectionBottomSheet(context: Context, selectionItems: Map<String, Array<Int>>, callback: (which: String) -> Unit): FrameLayout(context) {
     init {
         View.inflate(context, R.layout.drawer_tab_select_type_bottom_sheet, this)
 
@@ -41,7 +41,8 @@ class DrawerTabTypeSelectionBottomSheet(context: Context, selectionItems: Map<In
 
         findViewById<TextView>(android.R.id.title).setTextColor(accent)
 
-        val tintNormal = ColorUtils.setAlphaComponent(context.getColorAttr(android.R.attr.colorControlHighlight), 255)
+        val tintNormal = ColorUtils
+                .setAlphaComponent(context.getColorAttr(android.R.attr.colorControlHighlight), 255)
         val tintList = ColorStateList(arrayOf(
                 intArrayOf(android.R.attr.state_selected),
                 intArrayOf()),
@@ -81,7 +82,7 @@ class DrawerTabTypeSelectionBottomSheet(context: Context, selectionItems: Map<In
     }
 
     companion object {
-        fun show(context: Context, selectionItems: Map<Int, Array<Int>>, callback: (which: Int) -> Unit) {
+        fun show(context: Context, selectionItems: Map<String, Array<Int>>, callback: (which: String) -> Unit) {
             val sheet = SettingsBottomSheet.inflate(context)
             sheet.show(DrawerTabTypeSelectionBottomSheet(context, selectionItems) {
                 sheet.close(false)

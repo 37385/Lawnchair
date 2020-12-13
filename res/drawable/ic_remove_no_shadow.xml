@@ -13,15 +13,30 @@
      See the License for the specific language governing permissions and
      limitations under the License.
 -->
+<!--<shape xmlns:android="http://schemas.android.com/apk/res/android"-->
+<!--    android:shape="ring"-->
+<!--    android:useLevel="false"-->
+<!--    android:innerRadius="2.5dp"-->
+<!--    android:thickness="0.95dp" >-->
+
+<!--    <gradient-->
+<!--        android:startColor="@color/settings_background_black"-->
+<!--        android:endColor="@color/settings_background_black">-->
+<!--    </gradient>-->
+<!--    <size-->
+<!--        android:width="10dp"-->
+<!--        android:height="10dp">-->
+
+<!--    </size>-->
+<!--</shape>-->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-        android:width="24dp"
-        android:height="24dp"
-        android:viewportWidth="24.0"
-        android:viewportHeight="24.0"
-        android:tint="?android:attr/textColorPrimary" >
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="?android:attr/textColorPrimary">
+    
     <path
-        android:fillColor="#FFFFFFFF"
-        android:pathData="M13.41,12l5.29-5.29c0.39-0.39,0.39-1.02,0-1.41c-0.39-0.39-1.02-0.39-1.41,0L12,10.59L6.71,
-        5.29c-0.39-0.39-1.02-0.39-1.41,0c-0.39,0.39-0.39,1.02,0,1.41L10.59,12l-5.29,5.29c-0.39,0.39-0.39,1.02,
-        0,1.41c0.39,0.39,1.02,0.39,1.41,0L12,13.41l5.29,5.29c0.39,0.39,1.02,0.39,1.41,0c0.39-0.39,0.39-1.02,0-1.41L13.41,12z"/>
+        android:fillColor="@android:color/white"
+        android:pathData="M12,2C6.48,2,2,6.48,2,12c0,5.52,4.48,10,10,10s10-4.48,10-10C22,6.48,17.52,2,12,2z M12,20c-4.41,0-8-3.59-8-8 c0-4.41,3.59-8,8-8s8,3.59,8,8C20,16.41,16.41,20,12,20z" />
 </vector>

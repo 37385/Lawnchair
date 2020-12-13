@@ -18,26 +18,12 @@
 package ch.deletescape.lawnchair
 
 import android.content.Context
-import android.support.annotation.Keep
+import androidx.annotation.Keep
 import com.android.launcher3.LauncherAppState
-import com.android.launcher3.config.FeatureFlags
 import com.android.quickstep.OverviewCallbacks
-import com.google.android.apps.nexuslauncher.PredictionUiStateManager
 
 @Keep
 class LawnchairOverviewCallbacks(private val context: Context) : OverviewCallbacks() {
-
-    override fun onInitOverviewTransition() {
-        super.onInitOverviewTransition()
-        if (FeatureFlags.REFLECTION_FORCE_OVERVIEW_MODE) return
-        PredictionUiStateManager.getInstance(context).switchClient(PredictionUiStateManager.Client.OVERVIEW)
-    }
-
-    override fun onResetOverview() {
-        super.onResetOverview()
-        if (FeatureFlags.REFLECTION_FORCE_OVERVIEW_MODE) return
-        PredictionUiStateManager.getInstance(context).switchClient(PredictionUiStateManager.Client.HOME)
-    }
 
     override fun closeAllWindows() {
         super.closeAllWindows()

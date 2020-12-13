@@ -22,8 +22,8 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Environment
 import android.os.strictmode.Violation
-import android.support.annotation.RequiresApi
-import android.support.v4.content.ContextCompat
+import androidx.annotation.RequiresApi
+import androidx.core.content.ContextCompat
 import ch.deletescape.lawnchair.bugreport.BugReport
 import ch.deletescape.lawnchair.bugreport.BugReportClient
 import ch.deletescape.lawnchair.bugreport.BugReportFileManager
@@ -127,6 +127,7 @@ class LawnchairBugReporter(private val context: Context, private val crashHandle
             stream.println("version.incremental: ${Build.VERSION.INCREMENTAL}")
             stream.println("version.release: ${Build.VERSION.RELEASE}")
             stream.println("version.sdk_int: ${Build.VERSION.SDK_INT}")
+            stream.println("display.density_dpi: ${context.resources.displayMetrics.densityDpi}")
             stream.println()
             stream.println("error: $error")
             if (throwable != null) {

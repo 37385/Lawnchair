@@ -10,7 +10,6 @@ import android.content.SharedPreferences;
 import android.graphics.Point;
 import android.graphics.Rect;
 import android.net.Uri;
-import android.support.v4.app.ActivityOptionsCompat;
 import android.util.AttributeSet;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -18,6 +17,7 @@ import android.view.animation.AccelerateDecelerateInterpolator;
 import android.view.animation.Interpolator;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
+import androidx.core.app.ActivityOptionsCompat;
 import ch.deletescape.lawnchair.globalsearch.SearchProvider;
 import ch.deletescape.lawnchair.globalsearch.SearchProviderController;
 import com.android.launcher3.Launcher;
@@ -243,8 +243,11 @@ public abstract class BaseGContainerView extends FrameLayout implements View.OnC
     }
 
     private void loadIcon() {
-        SearchProvider provider = SearchProviderController.Companion.getInstance(getContext()).getSearchProvider();
-        ImageView gIcon = mQsbView.findViewById(R.id.g_icon);
-        gIcon.setImageDrawable(provider.getIcon(true));
+        if (mQsbView != null) {
+            SearchProvider provider = SearchProviderController.Companion.getInstance(getContext())
+                    .getSearchProvider();
+            ImageView gIcon = mQsbView.findViewById(R.id.g_icon);
+            gIcon.setImageDrawable(provider.getIcon(true));
+        }
     }
 }

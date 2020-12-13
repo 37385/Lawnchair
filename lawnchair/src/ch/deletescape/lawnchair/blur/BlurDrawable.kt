@@ -20,12 +20,19 @@
 package ch.deletescape.lawnchair.blur
 
 import android.graphics.Canvas
+import android.graphics.RectF
 import android.graphics.drawable.Drawable
 
 abstract class BlurDrawable : Drawable(), BlurWallpaperProvider.Listener {
 
     abstract var blurRadii: Radii
+    open val blurRadius: Float get() = blurRadii.average
     abstract var viewOffsetX: Float
+
+    open var blurScaleX = 0f
+    open var blurScaleY = 0f
+    open var blurPivotX = 0f
+    open var blurPivotY = 0f
 
     override fun draw(canvas: Canvas) {
         draw(canvas, false)
@@ -35,6 +42,10 @@ abstract class BlurDrawable : Drawable(), BlurWallpaperProvider.Listener {
 
     abstract fun setBlurBounds(left: Float, top: Float, right: Float, bottom: Float)
 
+    open fun setBlurBounds(bounds: RectF) {
+        setBlurBounds(bounds.left, bounds.top, bounds.right, bounds.bottom)
+    }
+
     abstract fun startListening()
     abstract fun stopListening()
 
@@ -43,6 +54,8 @@ abstract class BlurDrawable : Drawable(), BlurWallpaperProvider.Listener {
             val topRight: Float = 0f,
             val bottomLeft: Float = 0f,
             val bottomRight: Float = 0f) {
+
+        val average = (topLeft + topRight + bottomLeft + bottomRight) / 4
 
         constructor(radius: Float) : this(radius, radius, radius, radius)
         constructor(topRadius: Float, bottomRadius: Float)

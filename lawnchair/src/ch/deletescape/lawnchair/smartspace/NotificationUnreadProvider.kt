@@ -18,9 +18,9 @@
 package ch.deletescape.lawnchair.smartspace
 
 import android.service.notification.StatusBarNotification
-import android.support.annotation.Keep
-import android.support.v4.app.NotificationCompat.PRIORITY_DEFAULT
 import android.text.TextUtils
+import androidx.annotation.Keep
+import androidx.core.app.NotificationCompat.PRIORITY_DEFAULT
 import ch.deletescape.lawnchair.*
 import ch.deletescape.lawnchair.flowerpot.Flowerpot
 import ch.deletescape.lawnchair.flowerpot.FlowerpotApps
@@ -35,7 +35,7 @@ class NotificationUnreadProvider(controller: LawnchairSmartspaceController) :
         LawnchairSmartspaceController.NotificationBasedDataProvider(controller),
         NotificationsManager.OnChangeListener {
 
-    private val manager = NotificationsManager.instance
+    private val manager = NotificationsManager
     private var flowerpotLoaded = false
     private var flowerpotApps: FlowerpotApps? = null
     private val tmpKey = PackageUserKey(null, null)

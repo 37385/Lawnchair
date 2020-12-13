@@ -16,9 +16,11 @@
 
 package com.android.launcher3.dragndrop;
 
+import static com.android.launcher3.AbstractFloatingView.TYPE_DISCOVERY_BOUNCE;
 import static com.android.launcher3.LauncherAnimUtils.SPRING_LOADED_EXIT_DELAY;
 import static com.android.launcher3.LauncherState.NORMAL;
 
+import android.animation.ValueAnimator;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.res.Resources;
@@ -26,19 +28,22 @@ import android.graphics.Bitmap;
 import android.graphics.Point;
 import android.graphics.Rect;
 import android.os.IBinder;
+import android.util.Log;
 import android.view.DragEvent;
 import android.view.HapticFeedbackConstants;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
 
+import com.android.launcher3.AbstractFloatingView;
 import com.android.launcher3.DragSource;
 import com.android.launcher3.DropTarget;
 import com.android.launcher3.ItemInfo;
 import com.android.launcher3.Launcher;
 import com.android.launcher3.R;
-import com.android.launcher3.ShortcutInfo;
+import com.android.launcher3.WorkspaceItemInfo;
 import com.android.launcher3.accessibility.DragViewStateAnnouncer;
+import com.android.launcher3.testing.TestProtocol;
 import com.android.launcher3.util.ItemInfoMatcher;
 import com.android.launcher3.util.Thunk;
 import com.android.launcher3.util.TouchController;
@@ -146,6 +151,7 @@ public class DragController implements DragDriver.EventListener, TouchController
 
         // Hide soft keyboard, if visible
         UiThreadHelper.hideKeyboardAsync(mLauncher, mWindowToken);
+        AbstractFloatingView.closeOpenViews(mLauncher, false, TYPE_DISCOVERY_BOUNCE);
 
         mOptions = options;
         if (mOptions.systemDndStartPoint != null) {
@@ -225,6 +231,12 @@ public class DragController implements DragDriver.EventListener, TouchController
         }
     }
 
+    public void addFirstFrameAnimationHelper(ValueAnimator anim) {
+        if (mDragObject != null && mDragObject.dragView != null) {
+            mDragObject.dragView.mFirstFrameAnimatorHelper.addTo(anim);
+        }
+    }
+
     /**
      * Call this from a drag source view like this:
      *
@@ -276,7 +288,7 @@ public class DragController implements DragDriver.EventListener, TouchController
         // Cancel the current drag if we are removing an app that we are dragging
         if (mDragObject != null) {
             ItemInfo dragInfo = mDragObject.dragInfo;
-            if (dragInfo instanceof ShortcutInfo) {
+            if (dragInfo instanceof WorkspaceItemInfo) {
                 ComponentName cn = dragInfo.getTargetComponent();
                 if (cn != null && matcher.matches(dragInfo, cn)) {
                     cancelDrag();
@@ -669,5 +681,4 @@ public class DragController implements DragDriver.EventListener, TouchController
     public void removeDropTarget(DropTarget target) {
         mDropTargets.remove(target);
     }
-
 }

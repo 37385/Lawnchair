@@ -19,13 +19,14 @@ package ch.deletescape.lawnchair.settings.ui
 
 import android.graphics.drawable.Drawable
 import android.os.Bundle
-import android.support.v7.app.AlertDialog
-import android.support.v7.preference.PreferenceDialogFragmentCompat
 import android.util.Log
 import android.view.View
 import android.widget.NumberPicker
+import androidx.appcompat.app.AlertDialog
+import androidx.preference.PreferenceDialogFragmentCompat
 import ch.deletescape.lawnchair.applyAccent
 import ch.deletescape.lawnchair.colors.ColorEngine
+import com.android.launcher3.LauncherAppState
 import com.android.launcher3.R
 
 class GridSizeDialogFragmentCompat : PreferenceDialogFragmentCompat(), ColorEngine.OnColorChangeListener {
@@ -72,9 +73,10 @@ class GridSizeDialogFragmentCompat : PreferenceDialogFragmentCompat(), ColorEngi
     override fun onPrepareDialogBuilder(builder: AlertDialog.Builder) {
         super.onPrepareDialogBuilder(builder)
 
-        builder.setNeutralButton(R.string.theme_default, {_, _ ->
-            gridSizePreference.setSize(0, 0)
-        })
+        builder.setNeutralButton(R.string.theme_default) { _, _ ->
+            val idp = LauncherAppState.getIDP(context)
+            gridSizePreference.setSize(idp.numRowsOriginal, idp.numColumnsOriginal)
+        }
     }
 
     override fun onSaveInstanceState(outState: Bundle) {

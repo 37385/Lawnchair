@@ -19,10 +19,7 @@ package ch.deletescape.lawnchair.override
 
 import android.content.Context
 import ch.deletescape.lawnchair.iconpack.IconPackManager
-import com.android.launcher3.AppInfo
-import com.android.launcher3.FolderInfo
-import com.android.launcher3.ItemInfo
-import com.android.launcher3.ShortcutInfo
+import com.android.launcher3.*
 
 abstract class CustomInfoProvider<in T : ItemInfo>(val context: Context) {
 
@@ -50,30 +47,20 @@ abstract class CustomInfoProvider<in T : ItemInfo>(val context: Context) {
         TODO("not implemented")
     }
 
-    open fun supportsBadgeVisible(info: T) = false
-
-    open fun setBadgeVisible(info: T, visible: Boolean) {
-        TODO("not implemented")
-    }
-
-    open fun getBadgeVisible(info: T): Boolean {
-        TODO("not implemented")
-    }
-
     companion object {
 
         @Suppress("UNCHECKED_CAST")
         fun <T : ItemInfo> forItem(context: Context, info: ItemInfo?): CustomInfoProvider<T>? {
             return when (info) {
                 is AppInfo -> AppInfoProvider.getInstance(context)
-                is ShortcutInfo -> ShortcutInfoProvider.getInstance(context)
+                is WorkspaceItemInfo -> ShortcutInfoProvider.getInstance(context)
                 is FolderInfo -> FolderInfoProvider.getInstance(context)
                 else -> null
             } as CustomInfoProvider<T>?
         }
 
         fun isEditable(info: ItemInfo): Boolean {
-            return info is AppInfo || (info is ShortcutInfo && !info.hasPromiseIconUi())
+            return info is AppInfo || (info is WorkspaceItemInfo && !info.hasPromiseIconUi())
                     || info is FolderInfo
         }
     }

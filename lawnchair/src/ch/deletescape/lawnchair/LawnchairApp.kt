@@ -23,9 +23,10 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
+import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
-import android.support.annotation.Keep
+import androidx.annotation.Keep
 import ch.deletescape.lawnchair.blur.BlurWallpaperProvider
 import ch.deletescape.lawnchair.flowerpot.Flowerpot
 import ch.deletescape.lawnchair.bugreport.BugReportClient
@@ -39,7 +40,6 @@ import com.android.launcher3.BuildConfig
 import com.android.launcher3.R
 import com.android.launcher3.Utilities
 import com.android.quickstep.RecentsActivity
-import com.squareup.leakcanary.LeakCanary
 import ninja.sesame.lib.bridge.v1.SesameFrontend
 import ninja.sesame.lib.bridge.v1.SesameInitOnComplete
 import ninja.sesame.lib.bridge.v1_1.LookFeelKeys
@@ -49,23 +49,12 @@ class LawnchairApp : Application() {
     val activityHandler = ActivityHandler()
     val smartspace by lazy { LawnchairSmartspaceController(this) }
     val bugReporter = LawnchairBugReporter(this, Thread.getDefaultUncaughtExceptionHandler())
+    var mismatchedQuickstepTarget = false
     val recentsEnabled by lazy { checkRecentsComponent() }
     var accessibilityService: LawnchairAccessibilityService? = null
 
     init {
         d("Hidden APIs allowed: ${Utilities.HIDDEN_APIS_ALLOWED}")
-    }
-
-    override fun onCreate() {
-        super.onCreate()
-        if (BuildConfig.HAS_LEAKCANARY && lawnchairPrefs.initLeakCanary) {
-            if (LeakCanary.isInAnalyzerProcess(this)) {
-                // This process is dedicated to LeakCanary for heap analysis.
-                // You should not init your app in this process.
-                return
-            }
-            LeakCanary.install(this)
-        }
     }
 
     fun onLauncherAppStateCreated() {
@@ -125,7 +114,7 @@ class LawnchairApp : Application() {
 
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
-        ThemeManager.getInstance(this).updateNightMode(newConfig)
+        ThemeManager.dangerousGetInstance()?.updateNightMode(newConfig)
     }
 
     class ActivityHandler : ActivityLifecycleCallbacks {
@@ -195,8 +184,14 @@ class LawnchairApp : Application() {
             d("config_recentsComponentName ($recentsComponent) is not Lawnchair, disabling recents")
             return false
         }
+        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.Q) {
+            d("Quickstep target doesn't match, disabling recents")
+            mismatchedQuickstepTarget = true
+            return false
+        }
         return true
     }
 }
 
 val Context.lawnchairApp get() = applicationContext as LawnchairApp
+val Context.foregroundActivity get() = lawnchairApp.activityHandler.foregroundActivity

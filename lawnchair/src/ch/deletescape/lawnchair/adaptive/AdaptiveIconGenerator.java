@@ -27,19 +27,20 @@ import android.graphics.Color;
 import android.graphics.RectF;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
-import android.support.annotation.NonNull;
-import android.support.v4.graphics.ColorUtils;
 import android.util.Log;
 import android.util.SparseIntArray;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.core.graphics.ColorUtils;
 import ch.deletescape.lawnchair.LawnchairPreferences;
 import ch.deletescape.lawnchair.iconpack.AdaptiveIconCompat;
 import ch.deletescape.lawnchair.iconpack.LawnchairIconProvider;
 
 import com.android.launcher3.Utilities;
-import com.android.launcher3.graphics.ColorExtractor;
-import com.android.launcher3.graphics.FixedScaleDrawable;
-import com.android.launcher3.graphics.IconNormalizer;
-import com.android.launcher3.graphics.LauncherIcons;
+import com.android.launcher3.icons.ColorExtractor;
+import com.android.launcher3.icons.FixedScaleDrawable;
+import com.android.launcher3.icons.IconNormalizer;
+import com.android.launcher3.icons.LauncherIcons;
 
 // TODO: Make this thing async somehow (maybe using some drawable wrappers?)
 public class AdaptiveIconGenerator {
@@ -58,6 +59,7 @@ public class AdaptiveIconGenerator {
 
     private Context context;
     private Drawable icon;
+    private Drawable roundIcon;
 
     private final boolean extractColor;
     private final boolean treatWhite;
@@ -79,9 +81,10 @@ public class AdaptiveIconGenerator {
 
     private AdaptiveIconCompat tmp;
 
-    public AdaptiveIconGenerator(Context context, @NonNull Drawable icon) {
+    public AdaptiveIconGenerator(Context context, @NonNull Drawable icon, @Nullable Drawable roundIcon) {
         this.context = context;
         this.icon = AdaptiveIconCompat.wrap(icon);
+        this.roundIcon = AdaptiveIconCompat.wrapNullable(roundIcon);
         LawnchairPreferences prefs = Utilities.getLawnchairPrefs(context);
         shouldWrap = prefs.getEnableLegacyTreatment();
         extractColor = shouldWrap && prefs.getColorizedLegacyTreatment();
@@ -90,14 +93,17 @@ public class AdaptiveIconGenerator {
 
     private void loop() {
         if (Utilities.ATLEAST_OREO && shouldWrap) {
+            if (roundIcon != null && roundIcon instanceof AdaptiveIconCompat) {
+                icon = roundIcon;
+            }
             Drawable extractee = icon;
-            if (icon instanceof AdaptiveIconCompat) {
+            if (extractee instanceof AdaptiveIconCompat) {
                 if (!treatWhite) {
                     onExitLoop();
                     return;
                 }
-                AdaptiveIconCompat aid = (AdaptiveIconCompat) icon;
-                // we still check this seperately as this is the only information we need from the background
+                AdaptiveIconCompat aid = (AdaptiveIconCompat) extractee;
+                // we still check this separately as this is the only information we need from the background
                 if (!ColorExtractor.isSingleColor(aid.getBackground(), Color.WHITE)) {
                     onExitLoop();
                     return;
@@ -193,7 +199,7 @@ public class AdaptiveIconGenerator {
                     if (transparentScore > maxTransparent) {
                         isFullBleed = false;
                         fullBleedChecked = true;
-                        if (!extractColor) {
+                        if (!extractColor && transparentScore > noMixinScore) {
                             break;
                         }
                     }
@@ -248,6 +254,15 @@ public class AdaptiveIconGenerator {
             // Apply light background to mostly dark icons
             boolean veryDark = lightness < .35 && singleColor;
 
+            // Generate pleasant pastel colors for saturated icons
+            if (hsl[1] > .5f && lightness > .2) {
+                hsl[1] = 1f;
+                hsl[2] = .875f;
+                backgroundColor = ColorUtils.HSLToColor(hsl);
+                onExitLoop();
+                return;
+            }
+
             // Adjust color to reach suitable contrast depending on the relationship between the colors
             final int opaqueSize = size - transparentScore;
             final float pxPerColor = opaqueSize / (float) numColors;
@@ -267,6 +282,13 @@ public class AdaptiveIconGenerator {
 
     private Drawable genResult() {
         if (!Utilities.ATLEAST_OREO || !shouldWrap) {
+            if (roundIcon != null) {
+                if (icon instanceof AdaptiveIconCompat &&
+                        !(roundIcon instanceof AdaptiveIconCompat)) {
+                    return icon;
+                }
+                return roundIcon;
+            }
             return icon;
         }
         if (icon instanceof AdaptiveIconCompat) {

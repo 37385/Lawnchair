@@ -11,10 +11,9 @@ pipeline:
 
   # Step 2: The actual point of all of this
   build:
-    image: runmymind/docker-android-sdk:ubuntu-standalone
+    image: runmymind/docker-android-sdk:alpine-standalone
     secrets: [ store_password, key_password, github_token, debug_menu_code, accu_key ]
     environment:
-      - MAJOR_MINOR=2.0
       - CI_BUILD=true
       - CI_BUILD_NUMBER=${DRONE_BUILD_NUMBER}
       - CI_EVENT_TYPE=${DRONE_BUILD_EVENT}
@@ -25,8 +24,8 @@ pipeline:
   deploy:
     image: lawnchairlauncher/drone-telegram:latest
     secrets: [ bot_token, channel_id, dev_channel_id ]
-    apk_path: build/outputs/apk/*/*/*.apk
-    mapping_path: build/outputs/mapping/quickstepLawnchairCi/optimized/mapping.txt
+    apk_path: out/apks/Lawnchair.apk
+    mapping_path: out/mappings/mapping.txt
     channel_id: "-1001083653933"
     public_branch: alpha
     environment:
@@ -37,8 +36,8 @@ pipeline:
   mirror:
     image: lawnchairlauncher/drone-apkmirror:latest
     secrets: [ bot_token, notify_email, mail_server, mail_user, mail_password ]
-    apk_path: build/outputs/apk/quickstepLawnchairCi/optimized/src-quickstep-lawnchair-ci-optimized.apk
-    mapping_path: build/outputs/mapping/quickstepLawnchairCi/optimized/mapping.txt
+    apk_path: build/outputs/apk/*/*/*.apk
+    mapping_path: build/outputs/mapping/*/*/mapping.txt
     channel_id: "-1001400906236"
     mail_from: "buildbot@lawnchair.info"
     environment:

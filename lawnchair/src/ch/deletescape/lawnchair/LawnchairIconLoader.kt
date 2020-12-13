@@ -1,4 +1,6 @@
 /*
+ *     Copyright (C) 2019 Lawnchair Team.
+ *
  *     This file is part of Lawnchair Launcher.
  *
  *     Lawnchair Launcher is free software: you can redistribute it and/or modify
@@ -17,7 +19,6 @@
 
 package ch.deletescape.lawnchair
 
-import android.annotation.SuppressLint
 import android.app.ActivityManager
 import android.content.ComponentName
 import android.content.Context
@@ -27,26 +28,22 @@ import android.content.res.Resources
 import android.graphics.Bitmap
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
-import android.graphics.drawable.DrawableWrapper
-import android.os.Build
-import android.support.annotation.RequiresApi
 import android.util.Log
 import android.util.LruCache
 import com.android.launcher3.Utilities
+import com.android.launcher3.icons.BaseIconFactory
 import com.android.quickstep.NormalizedIconLoader
 import com.android.systemui.shared.recents.model.Task
 import com.android.systemui.shared.recents.model.TaskKeyLruCache
 
-@RequiresApi(Build.VERSION_CODES.P)
 class LawnchairIconLoader(private val context: Context, iconCache: TaskKeyLruCache<Drawable>,
-                          activityInfoCache: LruCache<ComponentName, ActivityInfo>) :
-        NormalizedIconLoader(context, iconCache, activityInfoCache) {
+                          activityInfoCache: LruCache<ComponentName, ActivityInfo>,
+                          disableColorExtraction: Boolean) :
+        NormalizedIconLoader(context, iconCache, activityInfoCache, disableColorExtraction) {
 
-    private val TAG = "LcIconLoader"
-
-    @SuppressLint("WrongConstant")
-    override fun createNewIconForTask(taskKey: Task.TaskKey, desc: ActivityManager.TaskDescription,
-                                      returnDefault: Boolean): Drawable? {
+    override fun createNewIconForTask(taskKey: Task.TaskKey,
+                                      desc: ActivityManager.TaskDescription,
+                                      returnDefault: Boolean): Drawable {
         val userId = taskKey.userId
         val iconResource = HiddenApiCompat.getIconResource(desc)
         if (iconResource != 0) {
@@ -77,15 +74,19 @@ class LawnchairIconLoader(private val context: Context, iconCache: TaskKeyLruCac
     }
 
     private fun createNonAdaptive(icon: Bitmap, userId: Int, desc: ActivityManager.TaskDescription): Drawable {
-        return createBadgedDrawable(NonAdaptiveIconDrawable(BitmapDrawable(mContext.resources, icon)), userId, desc)
+        return createBadgedDrawable(
+                BaseIconFactory.NonAdaptiveIconDrawable(BitmapDrawable(mContext.resources, icon)), userId, desc)
     }
 
     private fun getBadgedActivityIcon(icon: Drawable, activityInfo: ActivityInfo, userId: Int,
                                       desc: ActivityManager.TaskDescription): Drawable? {
         val bitmapInfo = getBitmapInfo(icon, userId, desc.primaryColor,
-                HiddenApiCompat.isInstantApp(activityInfo.applicationInfo))
-        return mDrawableFactory.newIcon(bitmapInfo, activityInfo)
+                                       HiddenApiCompat.isInstantApp(activityInfo.applicationInfo))
+        return mDrawableFactory.newIcon(context, bitmapInfo, activityInfo)
+    }
+
+    companion object {
+
+        private const val TAG = "LawnchairIconLoader"
     }
 }
-
-class NonAdaptiveIconDrawable(dr: Drawable?) : DrawableWrapper(dr)

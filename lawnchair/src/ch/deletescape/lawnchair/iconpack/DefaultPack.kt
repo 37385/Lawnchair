@@ -21,26 +21,37 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.pm.LauncherActivityInfo
 import android.content.pm.PackageManager
+import android.content.pm.ShortcutInfo
 import android.content.res.Resources
 import android.graphics.Bitmap
 import android.graphics.drawable.Drawable
+import android.os.Build
 import android.text.TextUtils
+import android.util.Log
 import ch.deletescape.lawnchair.adaptive.AdaptiveIconGenerator
 import ch.deletescape.lawnchair.getLauncherActivityInfo
+import ch.deletescape.lawnchair.lawnchairPrefs
+import ch.deletescape.lawnchair.util.ApkAssets
+import ch.deletescape.lawnchair.util.extensions.TAG
+import ch.deletescape.lawnchair.util.extensions.e
+import ch.deletescape.lawnchair.util.overrideSdk
 import com.android.launcher3.*
+import com.android.launcher3.Utilities.makeComponentKey
 import com.android.launcher3.compat.LauncherAppsCompat
 import com.android.launcher3.compat.UserManagerCompat
 import com.android.launcher3.shortcuts.DeepShortcutManager
-import com.android.launcher3.shortcuts.ShortcutInfoCompat
 import com.android.launcher3.util.ComponentKey
 import com.google.android.apps.nexuslauncher.DynamicIconProvider
 import com.google.android.apps.nexuslauncher.clock.DynamicClock
 import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParserException
 import java.io.IOException
+import java.lang.Exception
+import java.util.zip.ZipFile
 
 class DefaultPack(context: Context) : IconPack(context, "") {
 
+    private val prefs = context.lawnchairPrefs
     val dynamicClockDrawer by lazy { DynamicClock(context) }
     private val appMap = HashMap<ComponentKey, Entry>().apply {
         val launcherApps = LauncherAppsCompat.getInstance(context)
@@ -76,7 +87,7 @@ class DefaultPack(context: Context) : IconPack(context, "") {
     override fun getEntryForComponent(key: ComponentKey) = appMap[key]
 
     override fun getIcon(entry: IconPackManager.CustomIconEntry, iconDpi: Int): Drawable? {
-        return getIcon(ComponentKey(context, entry.icon), iconDpi)
+        return getIcon(makeComponentKey(context, entry.icon), iconDpi)
     }
 
     fun getIcon(key: ComponentKey, iconDpi: Int): Drawable? {
@@ -84,12 +95,17 @@ class DefaultPack(context: Context) : IconPack(context, "") {
 
         val info = key.getLauncherActivityInfo(context) ?: return null
         val component = key.componentName
-        val originalIcon = info.getIcon(iconDpi).apply { mutate() }
-        var roundIcon: Drawable? = null
-        getRoundIcon(component, iconDpi)?.let {
-            roundIcon = it.apply { mutate() }
+        var originalIcon = info.getIcon(iconDpi).apply { mutate() }
+        getLegacyIcon(component, iconDpi, prefs.forceShapeless)?.let {
+            originalIcon = it.apply { mutate() }
         }
-        val gen = AdaptiveIconGenerator(context, roundIcon ?: originalIcon)
+        var roundIcon: Drawable? = null
+        if (!prefs.forceShapeless) {
+            getRoundIcon(component, iconDpi)?.let {
+                roundIcon = it.apply { mutate() }
+            }
+        }
+        val gen = AdaptiveIconGenerator(context, originalIcon, roundIcon)
         return gen.result
     }
 
@@ -102,7 +118,7 @@ class DefaultPack(context: Context) : IconPack(context, "") {
         val key: ComponentKey
         val info: LauncherActivityInfo
         if (customIconEntry != null && !TextUtils.isEmpty(customIconEntry.icon)) {
-            key = ComponentKey(context, customIconEntry.icon)
+            key = makeComponentKey(context, customIconEntry.icon)
             info = key.getLauncherActivityInfo(context) ?: launcherActivityInfo
         } else {
             key = ComponentKey(launcherActivityInfo.componentName, launcherActivityInfo.user)
@@ -110,23 +126,28 @@ class DefaultPack(context: Context) : IconPack(context, "") {
         }
         val component = key.componentName
         val packageName = component.packageName
-        val originalIcon = info.getIcon(iconDpi).apply { mutate() }
+        var originalIcon = info.getIcon(iconDpi).apply { mutate() }
+        getLegacyIcon(component, iconDpi, prefs.forceShapeless)?.let {
+            originalIcon = it.apply { mutate() }
+        }
         if (iconProvider == null || (DynamicIconProvider.GOOGLE_CALENDAR != packageName && DynamicClock.DESK_CLOCK != component)) {
             var roundIcon: Drawable? = null
-            getRoundIcon(component, iconDpi)?.let {
-                roundIcon = it.apply { mutate() }
+            if (!prefs.forceShapeless) {
+                getRoundIcon(component, iconDpi)?.let {
+                    roundIcon = it.apply { mutate() }
+                }
             }
-            val gen = AdaptiveIconGenerator(context, roundIcon ?: originalIcon)
+            val gen = AdaptiveIconGenerator(context, originalIcon, roundIcon)
             return gen.result
         }
         return iconProvider.getDynamicIcon(info, iconDpi, flattenDrawable)
     }
 
-    override fun getIcon(shortcutInfo: ShortcutInfoCompat, iconDpi: Int): Drawable? {
+    override fun getIcon(shortcutInfo: ShortcutInfo, iconDpi: Int): Drawable? {
         ensureInitialLoadComplete()
 
         val drawable = DeepShortcutManager.getInstance(context).getShortcutIconDrawable(shortcutInfo, iconDpi)
-        val gen = AdaptiveIconGenerator(context, drawable)
+        val gen = AdaptiveIconGenerator(context, drawable, null)
         return gen.result
     }
 
@@ -137,7 +158,12 @@ class DefaultPack(context: Context) : IconPack(context, "") {
 
         if (Utilities.ATLEAST_OREO && itemInfo.itemType == LauncherSettings.Favorites.ITEM_TYPE_APPLICATION) {
             val component = if (customIconEntry?.icon != null) {
-                ComponentKey(context, customIconEntry.icon).componentName
+                try {
+                    makeComponentKey(context, customIconEntry.icon).componentName
+                } catch (e: NullPointerException) {
+                    Log.e(TAG, e.message, e)
+                    itemInfo.targetComponent
+                }
             } else {
                 itemInfo.targetComponent
             }
@@ -157,9 +183,17 @@ class DefaultPack(context: Context) : IconPack(context, "") {
 
         try {
             val resourcesForApplication = context.packageManager.getResourcesForApplication(component.packageName)
-            val assets = resourcesForApplication.assets
+            val info = context.packageManager.getApplicationInfo(component.packageName, PackageManager.GET_SHARED_LIBRARY_FILES or PackageManager.GET_META_DATA)
 
-            val parseXml = assets.openXmlResourceParser("AndroidManifest.xml")
+            val parseXml = try {
+                // For apps which are installed as Split APKs the asset instance we can get via PM won't hold the right Manifest for us.
+                ApkAssets(info.publicSourceDir).openXml("AndroidManifest.xml")
+            } catch (ex: Exception) {
+                ex.e()
+                val assets = resourcesForApplication.assets
+                assets.openXmlResourceParser("AndroidManifest.xml")
+            }
+
             while (parseXml.next() != XmlPullParser.END_DOCUMENT) {
                 if (parseXml.eventType == XmlPullParser.START_TAG) {
                     val name = parseXml.name
@@ -183,6 +217,64 @@ class DefaultPack(context: Context) : IconPack(context, "") {
 
             if (appIcon != null) {
                 val resId = Utilities.parseResourceIdentifier(resourcesForApplication, appIcon, component.packageName)
+                return resourcesForApplication.getDrawableForDensity(resId, iconDpi)
+            }
+        } catch (ex: PackageManager.NameNotFoundException) {
+            ex.printStackTrace()
+        } catch (ex: Resources.NotFoundException) {
+            ex.printStackTrace()
+        } catch (ex: IOException) {
+            ex.printStackTrace()
+        } catch (ex: XmlPullParserException) {
+            ex.printStackTrace()
+        }
+
+        return null
+    }
+
+    private fun getLegacyIcon(component: ComponentName, iconDpi: Int, loadShapeless: Boolean): Drawable? {
+        var appIcon: String? = null
+        val elementTags = HashMap<String, String>()
+
+        try {
+            val resourcesForApplication = context.packageManager.getResourcesForApplication(component.packageName)
+            val info = context.packageManager.getApplicationInfo(component.packageName, PackageManager.GET_SHARED_LIBRARY_FILES or PackageManager.GET_META_DATA)
+
+            val parseXml = try {
+                // For apps which are installed as Split APKs the asset instance we can get via PM won't hold the right Manifest for us.
+                ApkAssets(info.publicSourceDir).openXml("AndroidManifest.xml")
+            } catch (ex: Exception) {
+                ex.e()
+                val assets = resourcesForApplication.assets
+                assets.openXmlResourceParser("AndroidManifest.xml")
+            }
+
+            while (parseXml.next() != XmlPullParser.END_DOCUMENT) {
+                if (parseXml.eventType == XmlPullParser.START_TAG) {
+                    val name = parseXml.name
+                    for (i in 0 until parseXml.attributeCount) {
+                        elementTags[parseXml.getAttributeName(i)] = parseXml.getAttributeValue(i)
+                    }
+                    if (elementTags.containsKey("icon")) {
+                        if (name == "application") {
+                            appIcon = elementTags["icon"]
+                        } else if ((name == "activity" || name == "activity-alias") &&
+                                elementTags.containsKey("name") &&
+                                elementTags["name"] == component.className) {
+                            appIcon = elementTags["icon"]
+                            break
+                        }
+                    }
+                    elementTags.clear()
+                }
+            }
+            parseXml.close()
+
+            if (appIcon != null) {
+                val resId = Utilities.parseResourceIdentifier(resourcesForApplication, appIcon, component.packageName)
+                if (loadShapeless) {
+                    return resourcesForApplication.overrideSdk(Build.VERSION_CODES.M) { getDrawable(resId) }
+                }
                 return resourcesForApplication.getDrawableForDensity(resId, iconDpi)
             }
         } catch (ex: PackageManager.NameNotFoundException) {

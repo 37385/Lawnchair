@@ -27,7 +27,8 @@ import android.os.UserHandle;
 import android.text.TextUtils;
 import android.util.SparseArray;
 
-import com.android.launcher3.IconCache;
+import com.android.launcher3.Utilities;
+import com.android.launcher3.icons.IconCache;
 import com.android.launcher3.LauncherAppState;
 import com.android.launcher3.LauncherModel;
 import com.android.launcher3.config.FeatureFlags;
@@ -49,6 +50,7 @@ public class PackageInstallerCompatVL extends PackageInstallerCompat {
     private final Handler mWorker;
     private final Context mAppContext;
     private final HashMap<String,Boolean> mSessionVerifiedMap = new HashMap<>();
+    private final LauncherAppsCompat mLauncherApps;
 
     PackageInstallerCompatVL(Context context) {
         mAppContext = context.getApplicationContext();
@@ -56,20 +58,34 @@ public class PackageInstallerCompatVL extends PackageInstallerCompat {
         mCache = LauncherAppState.getInstance(context).getIconCache();
         mWorker = new Handler(LauncherModel.getWorkerLooper());
         mInstaller.registerSessionCallback(mCallback, mWorker);
+        mLauncherApps = LauncherAppsCompat.getInstance(context);
     }
 
     @Override
     public HashMap<String, SessionInfo> updateAndGetActiveSessionCache() {
         HashMap<String, SessionInfo> activePackages = new HashMap<>();
-        UserHandle user = Process.myUserHandle();
+        UserHandle primaryUser = Process.myUserHandle();
         for (SessionInfo info : getAllVerifiedSessions()) {
-            addSessionInfoToCache(info, user);
+            addSessionInfoToCache(info, Utilities.ATLEAST_Q ? info.getUser() : primaryUser);
             if (info.getAppPackageName() != null) {
                 activePackages.put(info.getAppPackageName(), info);
                 mActiveSessions.put(info.getSessionId(), info.getAppPackageName());
             }
         }
         return activePackages;
+    }
+
+    public SessionInfo getActiveSessionInfo(UserHandle user, String pkg) {
+        for (SessionInfo info : getAllVerifiedSessions()) {
+            boolean match = pkg.equals(info.getAppPackageName());
+            if (Utilities.ATLEAST_Q && !user.equals(info.getUser())) {
+                match = false;
+            }
+            if (match) {
+                return info;
+            }
+        }
+        return null;
     }
 
     @Thunk void addSessionInfoToCache(SessionInfo info, UserHandle user) {
@@ -171,7 +187,9 @@ public class PackageInstallerCompatVL extends PackageInstallerCompat {
 
     @Override
     public List<SessionInfo> getAllVerifiedSessions() {
-        List<SessionInfo> list = new ArrayList<>(mInstaller.getAllSessions());
+        List<SessionInfo> list = new ArrayList<>(Utilities.ATLEAST_Q
+                ? mLauncherApps.getAllPackageInstallerSessions()
+                : mInstaller.getAllSessions());
         Iterator<SessionInfo> it = list.iterator();
         while (it.hasNext()) {
             if (verify(it.next()) == null) {

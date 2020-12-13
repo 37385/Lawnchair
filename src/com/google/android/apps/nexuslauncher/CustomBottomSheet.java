@@ -30,7 +30,6 @@ import android.preference.PreferenceFragment;
 import android.preference.PreferenceScreen;
 import android.preference.SwitchPreference;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.ImageView;
@@ -42,6 +41,7 @@ import ch.deletescape.lawnchair.gestures.BlankGestureHandler;
 import ch.deletescape.lawnchair.gestures.GestureHandler;
 import ch.deletescape.lawnchair.gestures.ui.LauncherGesturePreference;
 import ch.deletescape.lawnchair.override.CustomInfoProvider;
+import ch.deletescape.lawnchair.predictions.LawnchairAppPredictor;
 import ch.deletescape.lawnchair.preferences.MultiSelectTabPreference;
 import com.android.launcher3.AppInfo;
 import com.android.launcher3.FolderInfo;
@@ -50,8 +50,8 @@ import com.android.launcher3.ItemInfoWithIcon;
 import com.android.launcher3.Launcher;
 import com.android.launcher3.LauncherSettings;
 import com.android.launcher3.R;
-import com.android.launcher3.ShortcutInfo;
 import com.android.launcher3.Utilities;
+import com.android.launcher3.WorkspaceItemInfo;
 import com.android.launcher3.util.ComponentKey;
 import com.android.launcher3.util.PackageManagerHelper;
 import com.android.launcher3.widget.WidgetsBottomSheet;
@@ -90,8 +90,8 @@ public class CustomBottomSheet extends WidgetsBottomSheet {
 
         if (itemInfo instanceof ItemInfoWithIcon || mInfoProvider.supportsIcon()) {
             ImageView icon = findViewById(R.id.icon);
-            if (itemInfo instanceof ShortcutInfo && ((ShortcutInfo) itemInfo).customIcon != null) {
-                icon.setImageBitmap(((ShortcutInfo) itemInfo).customIcon);
+            if (itemInfo instanceof WorkspaceItemInfo && ((WorkspaceItemInfo) itemInfo).customIcon != null) {
+                icon.setImageBitmap(((WorkspaceItemInfo) itemInfo).customIcon);
             } else if (itemInfo instanceof  ItemInfoWithIcon) {
                 icon.setImageBitmap(((ItemInfoWithIcon) itemInfo).iconBitmap);
             } else if (itemInfo instanceof FolderInfo) {
@@ -170,12 +170,11 @@ public class CustomBottomSheet extends WidgetsBottomSheet {
     }
 
     @Override
-    protected void onWidgetsBound() {
+    public void onWidgetsBound() {
     }
 
     public static class PrefsFragment extends PreferenceFragment implements Preference.OnPreferenceChangeListener, Preference.OnPreferenceClickListener {
         private final static String PREF_HIDE = "pref_app_hide";
-        private final static String PREF_HIDE_BADGE = "pref_badge_hide";
         private final static String PREF_HIDE_FROM_PREDICTIONS = "pref_app_prediction_hide";
         private final static boolean HIDE_PREDICTION_OPTION = true;
         public final static int requestCode = "swipeUp".hashCode() & 65535;
@@ -184,7 +183,6 @@ public class CustomBottomSheet extends WidgetsBottomSheet {
         private LauncherGesturePreference mSwipeUpPref;
         private MultiSelectTabPreference mTabsPref;
         private SwitchPreference mPrefCoverMode;
-        private SwitchPreference mPrefHideBadge;
         private LawnchairPreferences prefs;
 
         private ComponentKey mKey;
@@ -223,7 +221,6 @@ public class CustomBottomSheet extends WidgetsBottomSheet {
                 mKey = new ComponentKey(itemInfo.getTargetComponent(), itemInfo.user);
             }
             SwitchPreference mPrefHide = (SwitchPreference) findPreference(PREF_HIDE);
-            mPrefHideBadge = (SwitchPreference) findPreference(PREF_HIDE_BADGE);
             mPrefCoverMode = (SwitchPreference) findPreference("pref_cover_mode");
 
             if (isApp) {
@@ -251,15 +248,8 @@ public class CustomBottomSheet extends WidgetsBottomSheet {
                 getPreferenceScreen().removePreference(mSwipeUpPref);
             }
 
-            if (mProvider != null && mProvider.supportsBadgeVisible(itemInfo)) {
-                boolean badgeVisible = mProvider.getBadgeVisible(itemInfo);
-                mPrefHideBadge.setChecked(!badgeVisible);
-            } else {
-                screen.removePreference(mPrefHideBadge);
-            }
-
             if (mPrefHidePredictions != null) {
-                mPrefHidePredictions.setChecked(CustomAppPredictor.isHiddenApp(context, mKey));
+                mPrefHidePredictions.setChecked(LawnchairAppPredictor.isHiddenApp(context, mKey));
                 mPrefHidePredictions.setOnPreferenceChangeListener(this);
             }
 
@@ -348,12 +338,6 @@ public class CustomBottomSheet extends WidgetsBottomSheet {
                 provider.setSwipeUpAction(itemInfo, stringValue);
             }
 
-            if (mProvider != null && mProvider.supportsBadgeVisible(itemInfo)) {
-                CustomInfoProvider provider = CustomInfoProvider.Companion.forItem(getActivity(), itemInfo);
-                boolean badgeHidden = mPrefHideBadge.isChecked();
-                provider.setBadgeVisible(itemInfo, !badgeHidden);
-            }
-
             if (mTabsPref.getEdited()) {
                 prefs.getDrawerTabs().saveToJson();
             }
@@ -378,8 +362,7 @@ public class CustomBottomSheet extends WidgetsBottomSheet {
                     CustomAppFilter.setComponentNameState(launcher, mKey, enabled);
                     break;
                 case PREF_HIDE_FROM_PREDICTIONS:
-                    CustomAppPredictor.setComponentNameState(launcher, mKey, enabled);
-                    break;
+                    LawnchairAppPredictor.setComponentNameState(launcher, mKey, enabled);
             }
             return true;
         }

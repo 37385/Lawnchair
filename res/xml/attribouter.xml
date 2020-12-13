@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <about>
     <me.jfenn.attribouter.wedges.AppWedge
-        repo="LawnchairLauncher/Lawnchair"
+        repo="37385/Lawnchair"
         icon="@mipmap/ic_launcher"
         description="^@string/about_app_description"
         playStoreUrl="https://play.google.com/store/apps/details?id=ch.deletescape.lawnchair.plah"
@@ -51,7 +51,7 @@
                 icon="@drawable/ic_twitter"
                 url="https://twitter.com/paphonb" />
         </me.jfenn.attribouter.wedges.ContributorWedge>
-        
+
         <!-- UI/UX Designer: lumiqcreative -->
         <me.jfenn.attribouter.wedges.ContributorWedge
             name="^Lumiq Creative"
@@ -151,7 +151,7 @@
         <me.jfenn.attribouter.wedges.ContributorWedge
             name="^Daniel Felipe"
             avatar="https://i.imgur.com/2SLWkNU.jpg"
-            task="^@string/about_role_mod_support"/>
+            task="^@string/about_role_mod_support" />
 
         <!-- Magisk boi: Skittles9823 -->
         <me.jfenn.attribouter.wedges.ContributorWedge
@@ -270,13 +270,13 @@
             license="apache-2.0" />
 
         <!-- FiftyShadesOf -->
-        <me.jfenn.attribouter.wedges.LicenseWedge 
+        <me.jfenn.attribouter.wedges.LicenseWedge
             title="^FiftyShadesOf"
             repo="florent37/FiftyShadesOf"
             license="apache-2.0" />
 
         <!-- libRootJava -->
-        <me.jfenn.attribouter.wedges.LicenseWedge 
+        <me.jfenn.attribouter.wedges.LicenseWedge
             title="^libRootJava"
             repo="Chainfire/librootjava"
             license="apache-2.0" />

@@ -25,16 +25,24 @@ import android.graphics.Point;
 import android.hardware.display.DisplayManager;
 import android.hardware.display.DisplayManager.DisplayListener;
 import android.os.Handler;
-import android.support.v4.content.ContextCompat;
 import android.util.Log;
 import android.view.Display;
 import android.view.WindowManager;
 
+import ch.deletescape.lawnchair.LawnchairPreferences;
+import ch.deletescape.lawnchair.LawnchairPreferences.OnPreferenceChangeListener;
+import com.android.launcher3.MainThreadExecutor;
+
+import com.android.launcher3.Utilities;
+import java.util.function.Consumer;
+import org.jetbrains.annotations.NotNull;
+
 /**
  * {@link BroadcastReceiver} which watches configuration changes and
- * restarts the process in case changes which affect the device profile occur.
+ * notifies the callback in case changes which affect the device profile occur.
  */
-public class ConfigMonitor extends BroadcastReceiver implements DisplayListener {
+public class ConfigMonitor extends BroadcastReceiver implements DisplayListener,
+        OnPreferenceChangeListener {
 
     private static final String TAG = "ConfigMonitor";
 
@@ -49,7 +57,9 @@ public class ConfigMonitor extends BroadcastReceiver implements DisplayListener 
     private final Point mRealSize;
     private final Point mSmallestSize, mLargestSize;
 
-    public ConfigMonitor(Context context) {
+    private Consumer<Context> mCallback;
+
+    public ConfigMonitor(Context context, Consumer<Context> callback) {
         mContext = context;
 
         Configuration config = context.getResources().getConfiguration();
@@ -65,21 +75,26 @@ public class ConfigMonitor extends BroadcastReceiver implements DisplayListener 
         mSmallestSize = new Point();
         mLargestSize = new Point();
         display.getCurrentSizeRange(mSmallestSize, mLargestSize);
+
+        mCallback = callback;
+
+        // Listen for configuration change
+        mContext.registerReceiver(this, new IntentFilter(Intent.ACTION_CONFIGURATION_CHANGED));
+
+        // Listen for display manager change
+        mContext.getSystemService(DisplayManager.class)
+                .registerDisplayListener(this, new Handler(UiThreadHelper.getBackgroundLooper()));
+
+        Utilities.getLawnchairPrefs(context).addOnDeviceProfilePreferenceChangeListener(this);
     }
 
     @Override
     public void onReceive(Context context, Intent intent) {
         Configuration config = context.getResources().getConfiguration();
         if (mFontScale != config.fontScale || mDensity != config.densityDpi) {
-            Log.d(TAG, "Configuration changed");
-            killProcess();
+            Log.d(TAG, "Configuration changed.");
+            notifyChange();
         }
-    }
-
-    public void register() {
-        mContext.registerReceiver(this, new IntentFilter(Intent.ACTION_CONFIGURATION_CHANGED));
-        ContextCompat.getSystemService(mContext, DisplayManager.class)
-                .registerDisplayListener(this, new Handler(UiThreadHelper.getBackgroundLooper()));
     }
 
     @Override
@@ -98,7 +113,7 @@ public class ConfigMonitor extends BroadcastReceiver implements DisplayListener 
 
         if (!mRealSize.equals(mTmpPoint1) && !mRealSize.equals(mTmpPoint1.y, mTmpPoint1.x)) {
             Log.d(TAG, String.format("Display size changed from %s to %s", mRealSize, mTmpPoint1));
-            killProcess();
+            notifyChange();
             return;
         }
 
@@ -106,18 +121,37 @@ public class ConfigMonitor extends BroadcastReceiver implements DisplayListener 
         if (!mSmallestSize.equals(mTmpPoint1) || !mLargestSize.equals(mTmpPoint2)) {
             Log.d(TAG, String.format("Available size changed from [%s, %s] to [%s, %s]",
                     mSmallestSize, mLargestSize, mTmpPoint1, mTmpPoint2));
-            killProcess();
+            notifyChange();
         }
     }
 
-    private void killProcess() {
-        Log.d(TAG, "restarting launcher");
-        mContext.unregisterReceiver(this);
-        ContextCompat.getSystemService(mContext, DisplayManager.class).unregisterDisplayListener(this);
-        android.os.Process.killProcess(android.os.Process.myPid());
+    private synchronized void notifyChange() {
+        if (mCallback != null) {
+            Consumer<Context> callback = mCallback;
+            mCallback = null;
+            new MainThreadExecutor().execute(() -> callback.accept(mContext));
+        }
     }
 
     private Display getDefaultDisplay(Context context) {
-        return ContextCompat.getSystemService(context, WindowManager.class).getDefaultDisplay();
+        return context.getSystemService(WindowManager.class).getDefaultDisplay();
+    }
+
+    public void unregister() {
+        try {
+            mContext.unregisterReceiver(this);
+            mContext.getSystemService(DisplayManager.class).unregisterDisplayListener(this);
+            Utilities.getLawnchairPrefs(mContext).removeOnDeviceProfilePreferenceChangeListener(this);
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to unregister config monitor", e);
+        }
+    }
+
+    @Override
+    public void onValueChanged(@NotNull String key, @NotNull LawnchairPreferences prefs,
+            boolean force) {
+        if(!force) {
+            notifyChange();
+        }
     }
 }

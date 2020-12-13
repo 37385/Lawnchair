@@ -19,28 +19,27 @@ package ch.deletescape.lawnchair.groups
 
 import android.content.Context
 import ch.deletescape.lawnchair.*
-import ch.deletescape.lawnchair.util.extensions.d
 import com.android.launcher3.AppInfo
-import com.android.launcher3.FolderInfo
 import com.android.launcher3.R
-import com.android.launcher3.ShortcutInfo
 import com.android.launcher3.allapps.AlphabeticalAppsList
 import com.android.launcher3.util.ComponentKey
 
 class DrawerFolders(private val manager: AppGroupsManager) : AppGroups<DrawerFolders.Folder>(manager, AppGroupsManager.CategorizationType.Folders) {
 
+    init {
+        loadGroups()
+    }
+
     override fun getDefaultCreators(): List<GroupCreator<Folder>> {
         return emptyList()
     }
 
-    override fun getGroupCreator(type: Int): GroupCreator<Folder> {
+    override fun getGroupCreator(type: String): GroupCreator<Folder> {
         return when (type) {
-            TYPE_CUSTOM -> ::createCustomFolder
-            else -> ::createNull
+            TYPE_CUSTOM -> GroupCreator { context -> CustomFolder(context) }
+            else -> GroupCreator { null }
         }
     }
-
-    private fun createCustomFolder(context: Context) = CustomFolder(context)
 
     override fun onGroupsChanged(changeCallback: LawnchairPreferencesChangeCallback) {
         // TODO: reload after icon cache is ready to ensure high res folder previews
@@ -50,7 +49,8 @@ class DrawerFolders(private val manager: AppGroupsManager) : AppGroups<DrawerFol
     fun getFolderInfos(apps: AlphabeticalAppsList) = getFolderInfos(buildAppsMap(apps)::get)
 
     private fun buildAppsMap(apps: AlphabeticalAppsList): Map<ComponentKey, AppInfo> {
-        return apps.apps.associateBy { it.toComponentKey() }
+        // Copy the list before accessing it to prevent concurrent list access
+        return apps.apps.toList().associateBy { it.toComponentKey() }
     }
 
     private fun getFolderInfos(getAppInfo: (ComponentKey) -> AppInfo?): List<DrawerFolderInfo> = getGroups()
@@ -66,7 +66,7 @@ class DrawerFolders(private val manager: AppGroupsManager) : AppGroups<DrawerFol
             .mapNotNull { it.contents.value }
             .flatMapTo(mutableSetOf()) { it.asSequence() }
 
-    abstract class Folder(val context: Context, type: Int, titleRes: Int) : Group(type, context, titleRes) {
+    abstract class Folder(val context: Context, type: String, titleRes: Int) : Group(type, context, context.getString(titleRes)) {
         // Ensure icon customization sticks across group changes
         val id = LongCustomization(KEY_ID, Long.random + 9999L)
         open val isEmpty = true
@@ -78,7 +78,7 @@ class DrawerFolders(private val manager: AppGroupsManager) : AppGroups<DrawerFol
 
         open fun toFolderInfo(getAppInfo: (ComponentKey) -> AppInfo?) = DrawerFolderInfo(this).apply {
             setTitle(this@Folder.getTitle())
-            id = this@Folder.id.value()
+            id = this@Folder.id.value().toInt()
             contents = ArrayList()
         }
     }
@@ -109,14 +109,14 @@ class DrawerFolders(private val manager: AppGroupsManager) : AppGroups<DrawerFol
         override fun toFolderInfo(getAppInfo: (ComponentKey) -> AppInfo?) = super.toFolderInfo(getAppInfo).apply {
             // ✨
             this@CustomFolder.contents.value?.mapNotNullTo(contents) { key ->
-                getAppInfo(key)?.makeShortcut()
+                getAppInfo(key)?.makeWorkspaceItem()
             }?.sortWith(comparator)
         }
     }
 
     companion object {
 
-        const val TYPE_CUSTOM = 0
+        const val TYPE_CUSTOM = "0"
 
         const val KEY_ITEMS = "items"
     }
